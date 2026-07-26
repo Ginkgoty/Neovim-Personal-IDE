@@ -1,0 +1,7 @@
+# Neovim may fall back to the config directory when its normal state/log
+# directory is not writable. These files are machine-local diagnostics.
+nvim.log
+*.log
+
+# macOS metadata
+.DS_Store
