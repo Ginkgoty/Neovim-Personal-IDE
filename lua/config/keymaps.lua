@@ -2,28 +2,61 @@
 
 vim.g.mapleader = ' '
 
--- Windows options
-vim.api.nvim_set_keymap("n", "<leader>h", "<C-w>h", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<leader>j", "<C-w>j", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<leader>k", "<C-w>k", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<leader>l", "<C-w>l", { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>,', function()
+  vim.cmd.edit(vim.fs.joinpath(vim.fn.stdpath('config'), 'lua', 'config', 'settings.lua'))
+end, { silent = true, desc = 'Settings: edit global configuration' })
 
-vim.api.nvim_set_keymap('n', '<leader>ws', ':split<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>wv', ':vsplit<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>wc', ':close<CR>', { noremap = true, silent = true })
+-- Jump history
+vim.keymap.set('n', '<leader>jb', '<C-o>', { silent = true, desc = 'Jump: back' })
+vim.keymap.set('n', '<leader>jf', '<C-i>', { silent = true, desc = 'Jump: forward' })
 
-vim.api.nvim_set_keymap('n', '<C-Up>', ':resize -2<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<C-Down>', ':resize +2<CR>', { noremap = true, silent = true })
+-- Windows
+vim.keymap.set('n', '<leader>wh', '<C-w>h', { silent = true, desc = 'Window: focus left' })
+vim.keymap.set('n', '<leader>wj', '<C-w>j', { silent = true, desc = 'Window: focus down' })
+vim.keymap.set('n', '<leader>wk', '<C-w>k', { silent = true, desc = 'Window: focus up' })
+vim.keymap.set('n', '<leader>wl', '<C-w>l', { silent = true, desc = 'Window: focus right' })
+vim.keymap.set('n', '<M-Left>', '<C-w>h', { silent = true, desc = 'Window: focus left' })
+vim.keymap.set('n', '<M-Down>', '<C-w>j', { silent = true, desc = 'Window: focus down' })
+vim.keymap.set('n', '<M-Up>', '<C-w>k', { silent = true, desc = 'Window: focus up' })
+vim.keymap.set('n', '<M-Right>', '<C-w>l', { silent = true, desc = 'Window: focus right' })
+vim.keymap.set('n', '<leader>ws', '<cmd>split<CR>', { silent = true, desc = 'Window: horizontal split' })
+vim.keymap.set('n', '<leader>wv', '<cmd>vsplit<CR>', { silent = true, desc = 'Window: vertical split' })
+vim.keymap.set('n', '<leader>wc', '<cmd>close<CR>', { silent = true, desc = 'Window: close' })
+vim.keymap.set('n', '<leader>wo', '<C-w>o', { silent = true, desc = 'Window: close others' })
+vim.keymap.set('n', '<leader>w=', '<C-w>=', { silent = true, desc = 'Window: equalize sizes' })
 
-vim.api.nvim_set_keymap('n', '<C-Left>', ':vertical resize +2<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<C-Right>', ':vertical resize -2<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<C-Up>', '<cmd>resize -2<CR>', { silent = true, desc = 'Window: decrease height' })
+vim.keymap.set('n', '<C-Down>', '<cmd>resize +2<CR>', { silent = true, desc = 'Window: increase height' })
+vim.keymap.set('n', '<C-Left>', '<cmd>vertical resize +2<CR>', { silent = true, desc = 'Window: increase width' })
+vim.keymap.set('n', '<C-Right>', '<cmd>vertical resize -2<CR>', { silent = true, desc = 'Window: decrease width' })
 
--- Nvim Tree
-vim.api.nvim_set_keymap('n', '<leader>e', ':NvimTreeToggle<CR>', { noremap = true, silent = true })
+-- Explorer
+vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeFindFileToggle<CR>', {
+  silent = true,
+  desc = 'Explorer: reveal current file / toggle',
+})
 
 -- Bufferline
-vim.api.nvim_set_keymap('n', '<leader>bp', ':BufferLineCyclePrev<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>bn', ':BufferLineCycleNext<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>bb', '<cmd>Telescope buffers<CR>', {
+  silent = true,
+  desc = 'Buffer: search',
+})
+vim.keymap.set('n', '<leader>bp', '<cmd>BufferLineCyclePrev<CR>', {
+  silent = true,
+  desc = 'Buffer: previous',
+})
+vim.keymap.set('n', '<leader>bn', '<cmd>BufferLineCycleNext<CR>', {
+  silent = true,
+  desc = 'Buffer: next',
+})
+vim.keymap.set('n', '<S-Left>', '<cmd>BufferLineCyclePrev<CR>', {
+  silent = true,
+  desc = 'Buffer: previous',
+})
+vim.keymap.set('n', '<S-Right>', '<cmd>BufferLineCycleNext<CR>', {
+  silent = true,
+  desc = 'Buffer: next',
+})
 -- Custom function: close the current buffer, switch to the next, or confirm exit if no buffers remain
 local function close_buffer_or_quit()
   local buffers = vim.fn.getbufinfo({ buflisted = true })
@@ -49,20 +82,33 @@ local function close_buffer_or_quit()
 end
 
 -- Map <leader>bd to close the current buffer or quit if no buffers remain
-vim.keymap.set('n', '<leader>bd', close_buffer_or_quit, { silent = true, desc = 'Close buffer or quit' })
+vim.keymap.set('n', '<leader>bd', close_buffer_or_quit, { silent = true, desc = 'Buffer: close or quit' })
+vim.keymap.set('n', '<M-x>', close_buffer_or_quit, { silent = true, desc = 'Buffer: close or quit' })
 
 
--- ToggleTerm
-vim.api.nvim_set_keymap('n', '<leader>t', ':ToggleTerm<CR>', { noremap = true, silent = true })
+-- Terminal
+vim.keymap.set('n', '<leader>t', '<cmd>ToggleTerm<CR>', { silent = true, desc = 'Terminal: toggle' })
+vim.keymap.set('t', '<leader>t', '<C-\\><C-n><cmd>ToggleTerm<CR>', {
+  silent = true,
+  desc = 'Terminal: toggle',
+})
+vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', {
+  silent = true,
+  desc = 'Terminal: normal mode',
+})
 
 -- Telescope
-vim.api.nvim_set_keymap('n', '<leader>ff', ':Telescope find_files<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>fg', ':Telescope live_grep<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>fc', ':Telescope commands<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>fm', ':Telescope man_pages<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>ff', '<cmd>Telescope find_files<CR>', { silent = true, desc = 'Find: files' })
+vim.keymap.set('n', '<leader>fg', '<cmd>Telescope live_grep<CR>', { silent = true, desc = 'Find: text (grep)' })
+vim.keymap.set({ 'n', 'v' }, '<leader>fw', function()
+  require('telescope.builtin').grep_string()
+end, { silent = true, desc = 'Find: word / selection' })
+vim.keymap.set('n', '<leader>fr', '<cmd>Telescope oldfiles<CR>', { silent = true, desc = 'Find: recent files' })
+vim.keymap.set('n', '<leader>fc', '<cmd>Telescope commands<CR>', { silent = true, desc = 'Find: commands' })
+vim.keymap.set('n', '<leader>fm', '<cmd>Telescope man_pages<CR>', { silent = true, desc = 'Find: man pages' })
 
 -- Git pickers
-vim.api.nvim_set_keymap('n', '<leader>gf', ':Telescope git_files<CR>', { noremap = true, silent = true, desc = 'Git files' })
-vim.api.nvim_set_keymap('n', '<leader>gs', ':Telescope git_status<CR>', { noremap = true, silent = true, desc = 'Git status' })
-vim.api.nvim_set_keymap('n', '<leader>gc', ':Telescope git_commits<CR>', { noremap = true, silent = true, desc = 'Git commits' })
-vim.api.nvim_set_keymap('n', '<leader>gb', ':Telescope git_branches<CR>', { noremap = true, silent = true, desc = 'Git branches' })
+vim.keymap.set('n', '<leader>gf', '<cmd>Telescope git_files<CR>', { silent = true, desc = 'Git: files' })
+vim.keymap.set('n', '<leader>gs', '<cmd>Telescope git_status<CR>', { silent = true, desc = 'Git: status' })
+vim.keymap.set('n', '<leader>gc', '<cmd>Telescope git_commits<CR>', { silent = true, desc = 'Git: commits' })
+vim.keymap.set('n', '<leader>gb', '<cmd>Telescope git_branches<CR>', { silent = true, desc = 'Git: branches' })

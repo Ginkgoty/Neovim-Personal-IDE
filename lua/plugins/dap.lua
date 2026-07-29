@@ -1,32 +1,26 @@
+local languages = require("config.languages")
+local dap_dependencies = {
+  {
+    "rcarriga/nvim-dap-ui",
+    dependencies = { "nvim-neotest/nvim-nio" },
+  },
+}
+if languages.enabled("python") then dap_dependencies[#dap_dependencies + 1] = "mfussenegger/nvim-dap-python" end
+if languages.enabled("go") then dap_dependencies[#dap_dependencies + 1] = "leoluz/nvim-dap-go" end
+dap_dependencies[#dap_dependencies + 1] = {
+  "WhoIsSethDaniel/mason-tool-installer.nvim",
+  dependencies = { "mason-org/mason.nvim" },
+  opts = { ensure_installed = languages.mason_tools() },
+}
+
 return {
   {
     "mfussenegger/nvim-dap",
-    dependencies = {
-      "nvim-neotest/nvim-nio",
-      "rcarriga/nvim-dap-ui",
-      "mfussenegger/nvim-dap-python",
-      "leoluz/nvim-dap-go",
-      "mfussenegger/nvim-jdtls",
-      {
-        "WhoIsSethDaniel/mason-tool-installer.nvim",
-        dependencies = { "mason-org/mason.nvim" },
-        opts = {
-          ensure_installed = {
-            "debugpy",
-            "codelldb",
-            "java-debug-adapter",
-            "java-test",
-            "delve",
-            "goimports",
-            "stylua",
-          },
-        },
-      },
-    },
+    dependencies = dap_dependencies,
     config = function()
+      local platform = require("config.platform")
       local dap = require("dap")
       local dapui = require("dapui")
-      local mason = vim.fn.stdpath("data") .. "/mason/packages"
 
       dapui.setup()
 
@@ -35,27 +29,31 @@ return {
       dap.listeners.before.event_terminated.dapui_config = dapui.close
       dap.listeners.before.event_exited.dapui_config = dapui.close
 
-      require("dap-python").setup(mason .. "/debugpy/venv/bin/python")
-      require("dap-go").setup({
-        delve = {
-          path = mason .. "/delve/dlv",
-        },
-      })
+      if languages.enabled("python") then
+        -- Keep the adapter isolated from project/global Python environments.
+        require("dap-python").setup(platform.debugpy_python())
+      end
+      if languages.enabled("go") and languages.available("go") then
+        require("dap-go").setup({
+          delve = {
+            path = platform.executable(platform.mason_package("delve", "dlv")),
+          },
+        })
+      end
 
       dap.adapters.codelldb = {
         type = "server",
         port = "${port}",
         executable = {
-          command = mason .. "/codelldb/extension/adapter/codelldb",
+          command = platform.mason_bin("codelldb"),
           args = { "--port", "${port}" },
         },
       }
 
-      -- GDB 14.1+ includes a native DAP adapter. Keep it alongside codelldb so
-      -- GCC/GDB projects can select the matching debugger with F5.
+      -- GDB 14.1+ includes a native DAP adapter.
       dap.adapters.gdb = {
         type = "executable",
-        command = vim.fn.exepath("gdb") ~= "" and vim.fn.exepath("gdb") or "gdb",
+        command = platform.gdb_path() or "gdb",
         args = { "--interpreter=dap", "--quiet" },
       }
 
@@ -64,7 +62,7 @@ return {
         type = "codelldb",
         request = "launch",
         program = function()
-          return vim.fn.input("Executable: ", vim.fn.getcwd() .. "/", "file")
+          return vim.fn.input("Executable: ", platform.join(vim.fn.getcwd(), ""), "file")
         end,
         cwd = "${workspaceFolder}",
         stopOnEntry = false,
@@ -77,18 +75,58 @@ return {
         cwd = "${workspaceFolder}",
         stopAtBeginningOfMainSubprogram = false,
       }
-      dap.configurations.c = { codelldb_config, gdb_config }
-      dap.configurations.cpp = { codelldb_config, gdb_config }
-      dap.configurations.rust = {
-        vim.tbl_extend("force", codelldb_config, { name = "Launch Rust executable" }),
-      }
+      local toolchain = platform.c_toolchain()
+      local preferred_debugger = toolchain and toolchain.debugger
+        or (platform.is_macos and "codelldb" or "gdb")
+      local cpp_configurations
+      if preferred_debugger == "codelldb" then
+        -- macOS/Apple Clang and Windows/MSVC prefer CodeLLDB. On MSVC this is
+        -- the portable Neovim option for PDB debugging; cppvsdbg is omitted.
+        cpp_configurations = { codelldb_config }
+        if not platform.is_windows and platform.gdb_path() then
+          table.insert(cpp_configurations, gdb_config)
+        end
+      else
+        -- MinGW and Linux use the debugger matching their native toolchain.
+        cpp_configurations = { gdb_config, codelldb_config }
+      end
+      if languages.enabled("cpp") and languages.available("cpp") then
+        dap.configurations.c = cpp_configurations
+        dap.configurations.cpp = cpp_configurations
+      end
+      if languages.enabled("rust") and languages.available("rust") then
+        dap.configurations.rust = {
+          vim.tbl_extend("force", codelldb_config, { name = "Launch Rust executable" }),
+        }
+      end
 
-      vim.keymap.set("n", "<leader>dg", function()
-        require("dap-go").debug_test()
-      end, { desc = "Debug Go: nearest test" })
-      vim.keymap.set("n", "<leader>dG", function()
-        require("dap-go").debug_last_test()
-      end, { desc = "Debug Go: last test" })
+      if languages.enabled("csharp") and languages.available("csharp") then
+        dap.adapters.coreclr = {
+          type = "executable",
+          command = platform.mason_bin("netcoredbg"),
+          args = { "--interpreter=vscode" },
+        }
+        dap.configurations.cs = {
+          {
+            name = "Launch .NET assembly",
+            type = "coreclr",
+            request = "launch",
+            program = function()
+              return vim.fn.input("Path to DLL: ", platform.join(vim.fn.getcwd(), "bin", "Debug", ""), "file")
+            end,
+            cwd = "${workspaceFolder}",
+          },
+        }
+      end
+
+      if languages.enabled("go") and languages.available("go") then
+        vim.keymap.set("n", "<leader>dg", function()
+          require("dap-go").debug_test()
+        end, { desc = "Debug Go: nearest test" })
+        vim.keymap.set("n", "<leader>dG", function()
+          require("dap-go").debug_last_test()
+        end, { desc = "Debug Go: last test" })
+      end
 
       vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DiagnosticError" })
       vim.fn.sign_define("DapBreakpointCondition", { text = "◆", texthl = "DiagnosticWarn" })
@@ -98,6 +136,13 @@ return {
       vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Debug: step over" })
       vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Debug: step into" })
       vim.keymap.set("n", "<F12>", dap.step_out, { desc = "Debug: step out" })
+      -- Leader-key equivalents make the core controls discoverable in
+      -- which-key; keep the conventional function keys for fast use.
+      vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "Debug: continue/start" })
+      vim.keymap.set("n", "<leader>do", dap.step_over, { desc = "Debug: step over" })
+      vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Debug: step into" })
+      vim.keymap.set("n", "<leader>dO", dap.step_out, { desc = "Debug: step out" })
+      vim.keymap.set("n", "<leader>dp", dap.pause, { desc = "Debug: pause" })
       vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Debug: toggle breakpoint" })
       vim.keymap.set("n", "<leader>dB", function()
         dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
@@ -110,12 +155,14 @@ return {
         dapui.eval()
       end, { desc = "Debug: evaluate expression" })
 
-      vim.keymap.set("n", "<leader>dn", function()
-        require("dap-python").test_method()
-      end, { desc = "Debug Python: nearest test" })
-      vim.keymap.set("n", "<leader>df", function()
-        require("dap-python").test_class()
-      end, { desc = "Debug Python: test class" })
+      if languages.enabled("python") then
+        vim.keymap.set("n", "<leader>dn", function()
+          require("dap-python").test_method()
+        end, { desc = "Debug Python: nearest test" })
+        vim.keymap.set("n", "<leader>df", function()
+          require("dap-python").test_class()
+        end, { desc = "Debug Python: test class" })
+      end
     end,
   },
 }

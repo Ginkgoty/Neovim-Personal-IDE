@@ -3,3 +3,209 @@ vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
   pattern = "*.owl",
   command = "set filetype=xml",
 })
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  desc = "Code navigation keymaps",
+  callback = function(args)
+    local bufnr = args.buf
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    local telescope = require("telescope.builtin")
+
+    local function map(lhs, rhs, desc)
+      vim.keymap.set("n", lhs, rhs, {
+        buffer = bufnr,
+        silent = true,
+        desc = desc,
+      })
+    end
+
+    map("gd", telescope.lsp_definitions, "Code: go to definition")
+    map("gD", vim.lsp.buf.declaration, "Code: go to declaration")
+    map("grr", telescope.lsp_references, "Code: find references")
+    map("gri", telescope.lsp_implementations, "Code: find implementations")
+    map("grt", telescope.lsp_type_definitions, "Code: go to type definition")
+    map("gai", telescope.lsp_incoming_calls, "Code: incoming calls")
+    map("gao", telescope.lsp_outgoing_calls, "Code: outgoing calls")
+    map("K", vim.lsp.buf.hover, "Code: hover documentation")
+
+    map("<leader>cr", vim.lsp.buf.rename, "Code: rename symbol")
+    map("<leader>ca", vim.lsp.buf.code_action, "Code: code action")
+    map("<leader>fs", telescope.lsp_document_symbols, "Find: document symbols")
+    map("<leader>fS", telescope.lsp_workspace_symbols, "Find: workspace symbols")
+
+    if client and client:supports_method("textDocument/inlayHint", bufnr) then
+      vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+      map("<leader>uh", function()
+        local filter = { bufnr = bufnr }
+        vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled(filter), filter)
+      end, "UI: toggle inlay hints")
+    end
+
+    if client and client:supports_method("textDocument/codeLens", bufnr) then
+      vim.lsp.codelens.enable(true, { bufnr = bufnr, client_id = client.id })
+      map("<leader>ul", function()
+        local filter = { bufnr = bufnr }
+        vim.lsp.codelens.enable(not vim.lsp.codelens.is_enabled(filter), filter)
+      end, "UI: toggle CodeLens")
+      map("<leader>cl", vim.lsp.codelens.run, "Code: run CodeLens")
+    end
+
+    local function diagnostic_jump(count, severity)
+      return function()
+        vim.diagnostic.jump({ count = count, severity = severity })
+      end
+    end
+
+    map("[e", diagnostic_jump(-1, vim.diagnostic.severity.ERROR), "Diagnostics: previous error")
+    map("]e", diagnostic_jump(1, vim.diagnostic.severity.ERROR), "Diagnostics: next error")
+    map("[w", diagnostic_jump(-1, vim.diagnostic.severity.WARN), "Diagnostics: previous warning")
+    map("]w", diagnostic_jump(1, vim.diagnostic.severity.WARN), "Diagnostics: next warning")
+    map("[d", diagnostic_jump(-1), "Diagnostics: previous")
+    map("]d", diagnostic_jump(1), "Diagnostics: next")
+
+    map("<leader>xf", function()
+      vim.diagnostic.open_float({
+        scope = "cursor",
+        focusable = true,
+        source = true,
+      })
+    end, "Diagnostics: show under cursor")
+
+    map("<leader>xd", function()
+      telescope.diagnostics({ bufnr = bufnr })
+    end, "Diagnostics: current buffer")
+    map("<leader>xD", telescope.diagnostics, "Diagnostics: workspace")
+    map("<leader>xl", function()
+      vim.diagnostic.setloclist({ open = true })
+    end, "Diagnostics: location list")
+    map("<leader>xq", function()
+      vim.diagnostic.setqflist({ open = true })
+    end, "Diagnostics: quickfix list")
+
+    if client and client.name == "clangd" then
+      map("<leader>fh", "<cmd>LspClangdSwitchSourceHeader<CR>", "Find: alternate source/header")
+      map("<leader>xi", function()
+        require("config.clangd").info(bufnr)
+      end, "Diagnostics: clangd status")
+      require("config.clangd").warn_missing_database(bufnr, client)
+    end
+
+    if client
+        and client:supports_method("textDocument/documentHighlight", bufnr)
+        and not vim.b[bufnr].lsp_reference_highlight then
+      vim.b[bufnr].lsp_reference_highlight = true
+      local highlight_group = vim.api.nvim_create_augroup("lsp_reference_highlight_" .. bufnr, { clear = true })
+
+      vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+        group = highlight_group,
+        buffer = bufnr,
+        callback = vim.lsp.buf.document_highlight,
+        desc = "Highlight references under the cursor",
+      })
+      vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI", "InsertEnter" }, {
+        group = highlight_group,
+        buffer = bufnr,
+        callback = vim.lsp.buf.clear_references,
+        desc = "Clear LSP reference highlights",
+      })
+    end
+  end,
+})
+
+vim.api.nvim_create_user_command("ToolchainInfo", function()
+  local platform = require("config.platform")
+  local toolchain = platform.c_toolchain()
+  if not toolchain then
+    vim.notify("No usable native C/C++ toolchain detected", vim.log.levels.WARN)
+    return
+  end
+
+  local details
+  if toolchain.kind == "msvc" then
+    details = string.format("MSVC (%s)\ncl.exe: %s\nVisual Studio: %s", toolchain.generator, toolchain.compiler, toolchain.installation)
+  elseif toolchain.kind == "mingw" then
+    details = string.format("MinGW\ngcc: %s\ng++: %s\nmake: %s", toolchain.compiler, toolchain.cxx_compiler, toolchain.make)
+  else
+    details = string.format("%s\nC: %s\nC++: %s", toolchain.kind, toolchain.compiler, toolchain.cxx_compiler)
+  end
+  vim.notify(string.format("Selected native C/C++ toolchain:\n%s\nDebugger: %s", details, toolchain.debugger))
+end, { desc = "Show the detected native build toolchain" })
+
+vim.api.nvim_create_user_command("ClangdInfo", function()
+  require("config.clangd").info(0)
+end, { desc = "Show clangd configuration for the current buffer" })
+
+vim.api.nvim_create_user_command("LanguageInfo", function()
+  local languages = require("config.languages")
+  local enabled, disabled, unavailable = {}, {}, {}
+  for name, value in pairs(languages.enabled_languages) do
+    table.insert(value and enabled or disabled, name)
+    if value and not languages.available(name) then
+      table.insert(unavailable, string.format("%s (%s)", name, languages.prerequisite_names[name] or "prerequisite missing"))
+    end
+  end
+  table.sort(enabled)
+  table.sort(disabled)
+  table.sort(unavailable)
+  local unavailable_text = #unavailable > 0 and ("\nUnavailable toolchains: " .. table.concat(unavailable, ", ")) or ""
+  vim.notify(string.format(
+    "Enabled languages: %s\nDisabled languages: %s%s\nDevice overrides: lua/config/languages_local.lua",
+    table.concat(enabled, ", "),
+    table.concat(disabled, ", "),
+    unavailable_text
+  ))
+end, { desc = "Show enabled language support" })
+
+local function language_prerequisite_message(languages, names)
+  local lines = { "Some enabled languages are in highlighting-only mode:" }
+  for _, name in ipairs(names) do
+    local guide = languages.install_guides[name]
+    lines[#lines + 1] = string.format(
+      "- %s: %s\n  %s",
+      languages.display_names[name] or name,
+      guide.message,
+      guide.url
+    )
+  end
+  lines[#lines + 1] = "After installing the toolchain, restart Neovim."
+  return table.concat(lines, "\n")
+end
+
+vim.api.nvim_create_user_command("LanguageInstall", function(args)
+  local languages = require("config.languages")
+  local guide = languages.install_guides[args.args]
+  if not guide then
+    vim.notify("No installation guide for language: " .. args.args, vim.log.levels.ERROR)
+    return
+  end
+  vim.notify(string.format("%s\n%s", guide.message, guide.url))
+  vim.ui.open(guide.url)
+end, {
+  nargs = 1,
+  complete = function()
+    local names = vim.tbl_keys(require("config.languages").install_guides)
+    table.sort(names)
+    return names
+  end,
+  desc = "Open the official SDK/toolchain installation page",
+})
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  once = true,
+  desc = "Warn once about enabled languages with missing toolchains",
+  callback = function()
+    -- Do not emit startup notifications in headless jobs or test runs.
+    if #vim.api.nvim_list_uis() == 0 then
+      return
+    end
+    local languages = require("config.languages")
+    local unavailable = languages.unavailable_languages()
+    if #unavailable > 0 then
+      vim.schedule(function()
+        vim.notify(language_prerequisite_message(languages, unavailable), vim.log.levels.WARN, {
+          title = "Language toolchains",
+        })
+      end)
+    end
+  end,
+})

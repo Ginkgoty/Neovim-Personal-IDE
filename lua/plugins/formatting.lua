@@ -1,3 +1,5 @@
+local languages = require("config.languages")
+
 return {
   {
     "stevearc/conform.nvim",
@@ -22,14 +24,7 @@ return {
       },
     },
     opts = {
-      formatters_by_ft = {
-        python = { "ruff_format" },
-        c = { "clang_format" },
-        cpp = { "clang_format" },
-        go = { "goimports", "gofmt", stop_after_first = true },
-        rust = { "rustfmt", lsp_format = "fallback" },
-        lua = { "stylua" },
-      },
+      formatters_by_ft = languages.formatters(),
       default_format_opts = {
         lsp_format = "fallback",
         timeout_ms = 2000,

@@ -5,3 +5,6 @@ nvim.log
 
 # macOS metadata
 .DS_Store
+
+# Optional per-device language switches; see lua/config/languages.lua.
+lua/config/languages_local.lua

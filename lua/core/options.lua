@@ -25,6 +25,9 @@ vim.opt.number = true
 -- Set maximum text width to 80 characters
 vim.opt.textwidth = 80
 
+-- Trigger LSP reference highlighting soon after the cursor stops moving.
+vim.opt.updatetime = 500
+
 -- Show cursor position in the status line
 vim.opt.ruler = true
 -- vim.opt.cursorline = true

@@ -45,4 +45,47 @@ return {
       end,
     },
   },
+  {
+    "sindrets/diffview.nvim",
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory" },
+    dependencies = { "nvim-lua/plenary.nvim", "nvim-tree/nvim-web-devicons" },
+    keys = {
+      { "<leader>gh", "<cmd>DiffviewFileHistory %<CR>", desc = "Git: current file history" },
+      { "<leader>gH", "<cmd>DiffviewFileHistory<CR>", desc = "Git: repository history" },
+      { "<leader>gq", "<cmd>DiffviewClose<CR>", desc = "Git: close diff/history view" },
+    },
+    opts = {
+      enhanced_diff_hl = true,
+      view = {
+        default = { layout = "diff2_horizontal" },
+        file_history = { layout = "diff2_horizontal" },
+      },
+    },
+  },
+  {
+    "NeogitOrg/neogit",
+    cmd = "Neogit",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "sindrets/diffview.nvim",
+      "nvim-telescope/telescope.nvim",
+    },
+    keys = {
+      {
+        "<leader>gg",
+        function()
+          require("neogit").open({ kind = "split" })
+        end,
+        desc = "Git: status UI",
+      },
+    },
+    opts = {
+      kind = "split",
+      graph_style = "ascii",
+      integrations = {
+        diffview = true,
+        telescope = true,
+      },
+    },
+  },
 }
