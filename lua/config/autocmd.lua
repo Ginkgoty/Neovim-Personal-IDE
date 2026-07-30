@@ -26,7 +26,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("grt", telescope.lsp_type_definitions, "Code: go to type definition")
     map("gai", telescope.lsp_incoming_calls, "Code: incoming calls")
     map("gao", telescope.lsp_outgoing_calls, "Code: outgoing calls")
-    map("K", vim.lsp.buf.hover, "Code: hover documentation")
+    local symbol_documentation = require("config.symbol_documentation")
+    local hover_documentation = symbol_documentation.show
+
+    -- K is Neovim's conventional documentation key. Keep a leader alias so
+    -- the same action is also discoverable through which-key.
+    map("K", hover_documentation, "Find: documentation under cursor")
+    map("<leader>fd", hover_documentation, "Find: documentation under cursor")
+    symbol_documentation.setup(bufnr)
 
     -- Smart symbol navigation: on a definition, list its references;
     -- anywhere else, jump to the definition (falling back to declaration).

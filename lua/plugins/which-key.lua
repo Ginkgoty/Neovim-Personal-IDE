@@ -1,4 +1,5 @@
 local languages = require("config.languages")
+local ui = require("config.settings").ui or {}
 local groups = {
   { "<leader>b", group = "Buffer" },
   { "<leader>c", group = "Code actions" },
@@ -22,7 +23,7 @@ return {
     event = "VeryLazy",
     opts = {
       preset = "modern",
-      delay = 300,
+      delay = ui.which_key_delay_ms or 300,
       spec = groups,
     },
   },

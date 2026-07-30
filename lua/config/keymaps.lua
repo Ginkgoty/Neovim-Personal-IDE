@@ -7,8 +7,12 @@ vim.keymap.set('n', '<leader>,', function()
 end, { silent = true, desc = 'Settings: edit global configuration' })
 
 -- Jump history
-vim.keymap.set('n', '<leader>jb', '<C-o>', { silent = true, desc = 'Jump: back' })
-vim.keymap.set('n', '<leader>jf', '<C-i>', { silent = true, desc = 'Jump: forward' })
+vim.keymap.set('n', '<leader>jb', function()
+  require('config.jumps').navigate('back')
+end, { silent = true, desc = 'Jump: back in project' })
+vim.keymap.set('n', '<leader>jf', function()
+  require('config.jumps').navigate('forward')
+end, { silent = true, desc = 'Jump: forward in project' })
 
 -- Windows
 vim.keymap.set('n', '<leader>wh', '<C-w>h', { silent = true, desc = 'Window: focus left' })
@@ -49,6 +53,22 @@ vim.keymap.set('n', '<leader>bn', '<cmd>BufferLineCycleNext<CR>', {
   silent = true,
   desc = 'Buffer: next',
 })
+vim.keymap.set('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', {
+  silent = true,
+  desc = 'Buffer: close others',
+})
+vim.keymap.set('n', '<leader>bh', '<cmd>BufferLineCloseLeft<CR>', {
+  silent = true,
+  desc = 'Buffer: close left',
+})
+vim.keymap.set('n', '<leader>bl', '<cmd>BufferLineCloseRight<CR>', {
+  silent = true,
+  desc = 'Buffer: close right',
+})
+vim.keymap.set('n', '<leader>bx', '<cmd>BufferLinePickClose<CR>', {
+  silent = true,
+  desc = 'Buffer: pick one to close',
+})
 vim.keymap.set('n', '<M-Left>', '<cmd>BufferLineCyclePrev<CR>', {
   silent = true,
   desc = 'Buffer: previous',
@@ -57,48 +77,11 @@ vim.keymap.set('n', '<M-Right>', '<cmd>BufferLineCycleNext<CR>', {
   silent = true,
   desc = 'Buffer: next',
 })
--- Close the current buffer. When it is the last listed buffer, its window
--- shows a fresh empty buffer instead of quitting, so the editor and the
--- nvim-tree sidebar stay open (VSCode/JetBrains behavior). Use <leader>q
--- to quit the editor.
-local function close_buffer()
-  local current = vim.api.nvim_get_current_buf()
-
-  -- Plugin-owned buffers (explorer, terminal, help, pickers): closing the
-  -- window is safer than deleting a buffer owned by a plugin.
-  if vim.bo[current].buftype ~= '' or not vim.bo[current].buflisted then
-    pcall(vim.cmd, 'close')
-    return
-  end
-
-  local listed = vim.fn.getbufinfo({ buflisted = true })
-  local replacement
-
-  if #listed <= 1 then
-    -- Last listed buffer: replace it with an empty buffer rather than quit.
-    replacement = vim.api.nvim_create_buf(true, false)
-  else
-    for i, b in ipairs(listed) do
-      if b.bufnr == current then
-        local neighbor = listed[i - 1] or listed[i + 1]
-        replacement = neighbor and neighbor.bufnr or nil
-        break
-      end
-    end
-  end
-
-  -- :bdelete closes every window displaying the buffer. Point those windows
-  -- at the replacement buffer first so the editing window survives.
-  if replacement then
-    for _, win in ipairs(vim.fn.win_findbuf(current)) do
-      vim.api.nvim_win_set_buf(win, replacement)
-    end
-  end
-  vim.cmd('confirm bdelete ' .. current)
-end
-
--- Map <leader>bq to close the current buffer
-vim.keymap.set('n', '<leader>bq', close_buffer, { silent = true, desc = 'Buffer: close' })
+-- Close files and plugin panels without allowing a sidebar to become the only
+-- full-screen window. Bufferline's close buttons use the same implementation.
+vim.keymap.set('n', '<leader>bq', function()
+  require('config.buffers').close()
+end, { silent = true, desc = 'Buffer: close safely' })
 
 -- Quit the whole editor. Prompts once when buffers are modified:
 -- Yes saves everything (:xa), No (default) discards (:qa!).

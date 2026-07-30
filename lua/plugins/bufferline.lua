@@ -7,10 +7,17 @@ return {
         config = function()
             require('bufferline').setup {
                 options = {
-                    always_show_bufferline = true,
-                    -- Never show the CodeCompanion chat as a tab.
+                    -- The bar represents open files, not windows or plugin
+                    -- panels. Hide it when fewer than two files are open.
+                    always_show_bufferline = false,
                     custom_filter = function(buf)
-                        return vim.bo[buf].filetype ~= "codecompanion"
+                        return require("config.buffers").is_file(buf)
+                    end,
+                    close_command = function(buf)
+                        require("config.buffers").close(buf)
+                    end,
+                    right_mouse_command = function(buf)
+                        require("config.buffers").close(buf)
                     end,
                     offsets = {
                         {

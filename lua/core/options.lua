@@ -1,3 +1,26 @@
+local M = {}
+
+function M.apply_user_settings()
+  local settings = require("config.settings")
+  local editor = settings.editor or {}
+  local files = settings.files or {}
+
+  local indent_size = tonumber(editor.indent_size) or 4
+  vim.opt.shiftwidth = indent_size
+  vim.opt.tabstop = indent_size
+  vim.opt.softtabstop = indent_size
+  vim.opt.expandtab = editor.expand_tabs ~= false
+  vim.opt.number = editor.line_numbers ~= false
+  vim.opt.textwidth = tonumber(editor.text_width) or 80
+  vim.opt.updatetime = tonumber(editor.cursor_hold_ms) or 500
+  vim.opt.backup = files.backup == true
+  vim.opt.swapfile = files.swap == true
+  vim.opt.autoread = files.auto_reload_external_changes ~= false
+  vim.opt.clipboard = editor.system_clipboard == false and "" or "unnamedplus"
+end
+
+M.apply_user_settings()
+
 -- Show the current mode (e.g., insert, normal)
 vim.opt.showmode = true
 
@@ -9,24 +32,6 @@ vim.opt.autoindent = true
 
 -- Enable smart indentation
 vim.opt.smartindent = true
-
--- Set indentation width to 4 spaces
-vim.opt.shiftwidth = 4
-
--- Use spaces instead of tabs
-vim.opt.expandtab = true
-
--- Insert 4 spaces when the Tab key is pressed
-vim.opt.softtabstop = 4
-
--- Display line numbers
-vim.opt.number = true
-
--- Set maximum text width to 80 characters
-vim.opt.textwidth = 80
-
--- Trigger LSP reference highlighting soon after the cursor stops moving.
-vim.opt.updatetime = 500
 
 -- Show cursor position in the status line
 vim.opt.ruler = true
@@ -51,12 +56,6 @@ vim.opt.wildignorecase = true
 -- vim.opt.spell = true
 -- vim.opt.spelllang = {'en_us'}
 
--- Disable backup files
-vim.opt.backup = false
-
--- Disable swap files
-vim.opt.swapfile = false
-
 --[[
  Fix for red background on Chinese characters:
  If spell checking is enabled, Neovim may flag non-English characters as misspellings.
@@ -66,9 +65,6 @@ vim.opt.spell = false
 
 -- 256 Colors
 vim.opt.termguicolors = true
-
--- Allow copy to system clipboard
-vim.opt.clipboard = "unnamedplus"
 
 -- These optional remote providers are not used by this configuration.
 vim.g.loaded_node_provider = 0
@@ -90,3 +86,5 @@ vim.paste = (function(overridden)
     return overridden(lines, phase)
   end
 end)(vim.paste)
+
+return M

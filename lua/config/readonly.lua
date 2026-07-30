@@ -147,6 +147,10 @@ end
 
 function M.reload()
   package.loaded["config.settings"] = nil
+  local core_options = package.loaded["core.options"]
+  if core_options then
+    core_options.apply_user_settings()
+  end
   load_settings()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then

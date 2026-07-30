@@ -1,4 +1,6 @@
 local languages = require("config.languages")
+local formatting = require("config.settings").formatting or {}
+local timeout_ms = formatting.timeout_ms or 2000
 
 return {
   {
@@ -27,13 +29,15 @@ return {
       formatters_by_ft = languages.formatters(),
       default_format_opts = {
         lsp_format = "fallback",
-        timeout_ms = 2000,
+        timeout_ms = timeout_ms,
       },
       format_on_save = function(bufnr)
-        if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+        if formatting.on_save == false
+            or vim.g.disable_autoformat
+            or vim.b[bufnr].disable_autoformat then
           return
         end
-        return { timeout_ms = 2000, lsp_format = "fallback" }
+        return { timeout_ms = timeout_ms, lsp_format = "fallback" }
       end,
       notify_on_error = true,
       notify_no_formatters = false,

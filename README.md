@@ -78,7 +78,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :ClangdInfo         " Show clangd executable, arguments, root, and compile database
 :LanguageInfo       " Show enabled and disabled language support
 :LanguageInstall csharp " Open the official SDK/toolchain installation page
-:SettingsReload     " Reload lua/config/settings.lua without restarting
+:SettingsReload     " Reload settings that support live application
 :ReadonlyInfo       " Explain the current buffer's read-only state
 :ReadonlyUnlock     " Temporarily unlock the current buffer
 :ReadonlyLock       " Lock the current buffer again
@@ -88,6 +88,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :OverseerShell cmd  " Run an arbitrary command as a managed task
 :OverseerToggle     " Toggle the build/run task list
 :RenderMarkdown buf_toggle " Toggle rendering for the current Markdown buffer
+:Screenkey toggle    " Toggle the pressed-key overlay
+:checkhealth snacks  " Diagnose terminal image rendering
 :Copilot auth       " Sign in to GitHub Copilot (first use)
 :Copilot status     " Show Copilot sign-in and service status
 :CodeCompanionChat Toggle " Toggle the Copilot chat sidebar
@@ -118,7 +120,18 @@ Each prefix has one responsibility:
 | `<leader>x` | Diagnostics |
 
 Bracket mappings such as `[d`/`]d`, `[e`/`]e`, and `[c`/`]c` move to the
-previous/next diagnostic, error, or Git hunk. `K` shows LSP documentation.
+previous/next diagnostic, error, or Git hunk. `K` or `<leader>fd` shows the
+LSP signature, inferred type, and documentation for the symbol under the
+cursor. Press the same key again to focus the documentation window, then use
+normal window scrolling and `q` to close it. Documentation also opens
+automatically after the cursor rests on a symbol for three seconds in normal
+mode. Configure or disable this with `lsp.documentation` in
+`lua/config/settings.lua`. The floating-window title advertises `gd`
+definition, `gD` declaration, and `gri` implementation navigation. After
+pressing `K` again to focus the documentation window, those keys return to the
+original source symbol and perform the advertised navigation; `q` closes the
+window normally. Set `lsp.documentation.navigation_hints = false` for a plain
+title.
 
 Useful non-leader aliases are deliberately kept small:
 
@@ -129,17 +142,51 @@ Useful non-leader aliases are deliberately kept small:
 | `Ctrl-Arrow` | Resize the current window |
 | `F5` / `F10` / `F11` / `F12` | Continue, step over, step into, and step out |
 
+`<leader>uk` toggles a bottom-right pressed-key overlay for demonstrations,
+recordings, and keymap troubleshooting. It clears after three seconds of
+inactivity and is disabled inside terminal and prompt buffers. Its appearance
+and timing live under `ui.screenkey` in `lua/config/settings.lua`.
+
+Snacks.image renders images referenced by Markdown and other supported
+documents through the terminal's Kitty graphics protocol. Ghostty is supported
+directly, and ImageMagick converts non-PNG formats. Inline rendering, fallback
+floating previews, and size limits live under `ui.images` in
+`lua/config/settings.lua`. Only the image module is enabled: Snacks does not
+replace Telescope, nvim-tree, notifications, or the dashboard.
+
+Bufferline shows real file buffers only; unnamed scratch buffers and
+plugin-owned panels are excluded. `<leader>bq` and Bufferline's close button
+use the same safe close operation: the most recently used file replaces the
+closed file, and closing the last file leaves an unlabelled empty editor. A
+sidebar such as nvim-tree is therefore never allowed to consume the entire
+editing area merely because a tool buffer was closed. Use `<leader>bo` to
+close all other files, `<leader>bh` / `<leader>bl` to close files to the left
+or right, or `<leader>bx` to label the visible file tabs and pick one to close.
+
 `<leader>q` quits the editor. With unmodified buffers it exits
 immediately; otherwise it prompts once — `Yes` saves every modified buffer
 (`:xa`), `No` (the default) discards them (`:qa!`).
 
-Alt combinations work in every terminal because Alt is delivered as a leading
-ESC byte; unlike Shift, it needs no enhanced keyboard protocol. On macOS the
-terminal must send Option as Alt (for `Alt-Left`/`Alt-Right`). For Ghostty, a
-practical configuration is
-`macos-option-as-alt = left`, leaving the right Option key available for
-macOS character input. The leader-key equivalents remain available when
-terminal Alt handling is unavailable.
+Native `:q` still closes a window rather than deleting its buffer. When it
+targets the last real editing window, a `QuitPre` guard first closes nvim-tree
+and other auxiliary windows so the editor exits cleanly instead of leaving a
+full-screen sidebar with stale-looking file tabs. Use `<leader>bq` when the
+intent is to close the current file but keep the editing layout open.
+
+Alt combinations require the terminal to forward rather than consume the key.
+On macOS, Ghostty can reserve the left Option for terminal Alt while leaving
+the right Option available for macOS character input. Ghostty also binds
+Alt-Arrow to word movement by default, so override both bindings explicitly:
+
+```ini
+macos-option-as-alt = left
+keybind = alt+arrow_left=csi:1;3D
+keybind = alt+arrow_right=csi:1;3C
+```
+
+Reload the Ghostty configuration or restart Ghostty after changing it. The
+leader-key equivalents remain available when terminal Alt handling is
+unavailable.
 
 ### Code navigation and diagnostics
 
@@ -159,9 +206,13 @@ These mappings are available when an LSP client is attached:
 | `<leader>uh` | Toggle inlay hints |
 | `<leader>um` | Toggle rendered/raw Markdown view |
 
-`<leader>jb` and `<leader>jf` provide discoverable aliases for jump-list back
-and forward (`Ctrl-o` and `Ctrl-i`). This is also how to return after following
-a definition with `gd`.
+`<leader>jb` and `<leader>jf` move backward and forward through jumps made in
+the current session and current project. Cross-session entries restored by
+ShaDa are cleared at startup, and project-external entries are skipped. Native
+`Ctrl-o` and `Ctrl-i` retain access to Neovim's unrestricted jumplist. This is
+also how to return after following a definition with `gd`. Configure the two
+leader-key restrictions under `navigation.jump_history` in
+`lua/config/settings.lua`.
 
 clangd uses background indexing, clang-tidy, detailed completion, include
 insertion, and a platform-restricted compiler query-driver. Accurate project
@@ -213,6 +264,24 @@ this Neovim configuration.
 ### Global settings and protected files
 
 Edit `lua/config/settings.lua` to change user-facing global behavior. Its
+`editor` and `files` sections control indentation, text width, line numbers,
+clipboard integration, CursorHold timing, swap files, and backups.
+`formatting` controls format-on-save and its timeout; `ui` controls the
+WhichKey delay; `plugins.check_for_updates` controls Lazy's background update
+check; and `lsp.documentation` controls automatic symbol documentation and
+the hover window. Plugin startup options take effect after restarting Neovim;
+editor, read-only, terminal, and LSP behavior can be refreshed with
+`:SettingsReload`.
+
+External changes made by an Agent or another process are checked on focus,
+buffer entry, normal-mode idle, and return from a terminal. Clean buffers are
+reloaded automatically. If both disk and Neovim changed, the native prompt
+lets you keep the Neovim buffer (`OK`) or discard it and load the disk version
+(`Load File`). An externally deleted file is kept in memory with a warning.
+Configure this under `files.auto_reload_external_changes` and
+`files.external_change_conflict`; the safe default is `"ask"`.
+
+The
 `terminal.shell` option sets the integrated terminal shell explicitly (for
 example `"pwsh"`, `"powershell"`, `"cmd"`, or a Git Bash path such as
 `"C:/Program Files/Git/bin/bash.exe"`); left unset, Windows auto-detects
