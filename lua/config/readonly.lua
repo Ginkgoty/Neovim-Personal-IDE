@@ -1,6 +1,7 @@
 local M = {}
 
 local compiled = { include = {}, exclude = {} }
+local runtime_paths = {}
 local settings
 
 local function normalize(path)
@@ -16,6 +17,11 @@ local function normalize(path)
     return vim.env[name] or ""
   end)
   return vim.fs.normalize(path):gsub("\\", "/")
+end
+
+local function canonical(path)
+  path = normalize(path)
+  return normalize(vim.uv.fs_realpath(path) or path)
 end
 
 local function append(target, value)
@@ -88,6 +94,32 @@ local function matches(matchers, path)
   return false
 end
 
+local function matches_runtime_path(path)
+  if settings.protect_python_environments == false then
+    return false
+  end
+  local real_path = canonical(path)
+  for root in pairs(runtime_paths) do
+    if real_path == root or vim.startswith(real_path, root .. "/") then
+      return true
+    end
+  end
+
+  -- Avoid an activation/autocmd ordering gap when opening a package file
+  -- immediately after cached environment restoration.
+  local selector = package.loaded["venv-selector"]
+  if selector and type(selector.venv) == "function" then
+    local root = selector.venv()
+    if root and root ~= "" then
+      root = canonical(root):gsub("/+$", "")
+      if real_path == root or vim.startswith(real_path, root .. "/") then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function load_settings()
   settings = require("config.settings").readonly or {}
   local include = vim.deepcopy(settings.include or {})
@@ -96,6 +128,11 @@ local function load_settings()
   end
   if settings.protect_package_paths ~= false then
     vim.list_extend(include, package_patterns())
+  end
+  if settings.protect_python_environments ~= false then
+    for path in pairs(runtime_paths) do
+      include[#include + 1] = path .. "/**"
+    end
   end
   compiled.include = compile(include, "include")
   compiled.exclude = compile(settings.exclude or {}, "exclude")
@@ -106,7 +143,8 @@ function M.should_lock(path)
     return false
   end
   path = normalize(path)
-  return not matches(compiled.exclude, path) and matches(compiled.include, path)
+  return not matches(compiled.exclude, path)
+    and (matches(compiled.include, path) or matches_runtime_path(path))
 end
 
 function M.apply(bufnr)
@@ -129,11 +167,32 @@ function M.apply(bufnr)
   vim.b[bufnr].readonly_managed = true
 end
 
+-- Add an exact runtime-owned directory such as the environment selected by
+-- venv-selector.nvim. Keep paths for the session so files from an environment
+-- remain protected after switching projects or interpreters.
+function M.protect_runtime_path(path)
+  if not path or path == "" then
+    return
+  end
+  path = canonical(path):gsub("/+$", "")
+  if runtime_paths[path] then
+    return
+  end
+
+  runtime_paths[path] = true
+  load_settings()
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    M.apply(bufnr)
+  end
+  vim.cmd.redrawtabline()
+end
+
 local function unlock(bufnr)
   vim.bo[bufnr].readonly = false
   vim.bo[bufnr].modifiable = true
   vim.b[bufnr].readonly_managed = false
   vim.b[bufnr].readonly_unlocked = true
+  vim.cmd.redrawtabline()
 end
 
 local function lock(bufnr)
@@ -143,6 +202,7 @@ local function lock(bufnr)
     vim.bo[bufnr].modifiable = false
   end
   vim.b[bufnr].readonly_managed = true
+  vim.cmd.redrawtabline()
 end
 
 function M.reload()
@@ -168,7 +228,7 @@ function M.setup()
   load_settings()
 
   local group = vim.api.nvim_create_augroup("readonly_paths", { clear = true })
-  vim.api.nvim_create_autocmd({ "BufReadPost", "BufFilePost" }, {
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufFilePost", "BufEnter" }, {
     group = group,
     callback = function(args)
       M.apply(args.buf)

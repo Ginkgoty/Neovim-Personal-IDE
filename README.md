@@ -48,7 +48,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
   CodeCompanion chat sidebar (`<leader>lc`); sign in once with
   `:Copilot auth` and both pick it up. Chats are auto-saved and can be
   browsed and restored with `<leader>lh`
-- Ruff and ty for modern Python projects
+- Ruff and ty for modern Python projects, with per-workspace interpreter
+  discovery, selection, caching, terminal activation, and DAP synchronization
 - DAP debugging with CodeLLDB, GDB, NetCoreDbg, debugpy, Delve, and Java Debug
 - Formatting through Conform: Ruff, clang-format, CSharpier,
   goimports/gofmt, rustfmt, and StyLua
@@ -90,6 +91,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :RenderMarkdown buf_toggle " Toggle rendering for the current Markdown buffer
 :Screenkey toggle    " Toggle the pressed-key overlay
 :checkhealth snacks  " Diagnose terminal image rendering
+:VenvSelect          " Discover and select the current Python interpreter
 :Copilot auth       " Sign in to GitHub Copilot (first use)
 :Copilot status     " Show Copilot sign-in and service status
 :CodeCompanionChat Toggle " Toggle the Copilot chat sidebar
@@ -220,6 +222,35 @@ diagnostics still depend on `compile_commands.json`, `compile_flags.txt`, or a
 project `.clangd` file. Neovim warns once per project when no compilation
 database is found; it does not guess a C++ standard, macro set, or include path.
 
+### Python environments
+
+uv.nvim is limited to uv project/package commands. Interpreter discovery and
+activation are owned by venv-selector.nvim so that uv, standard venv, Poetry,
+Pipenv, Conda, Pyenv, Hatch, and other common layouts share one workflow.
+
+| Key | Action |
+| --- | --- |
+| `<leader>pe` | Discover and select an interpreter for the current workspace |
+| `<leader>pE` | Show the selected interpreter, environment, and attached Python LSPs |
+| `<leader>pr` | Run the current file through uv |
+| `<leader>ps` | Run the visual selection through uv |
+| `<leader>pf` | Select and run a Python function through uv |
+| `<leader>pa` / `<leader>pd` | Add/remove a project dependency |
+| `<leader>pc` | Synchronize the uv project environment |
+
+The first selection is cached per workspace and restored automatically on
+later visits. Selecting another interpreter updates Neovim's environment,
+restarts Python-specific LSP clients such as ty and Ruff with the new
+environment, updates nvim-dap-python, and affects terminals opened afterwards.
+Configure cache restoration, notifications, and the picker backend under
+`python.environment` in `lua/config/settings.lua`. Existing terminals and
+already-running external shells are intentionally not modified.
+
+The complete selected environment is also added to the read-only protection
+set for the current Neovim session. This protects installed packages on both
+Unix (`lib/python*/site-packages`) and Windows (`Lib/site-packages`) without
+locking editable source trees outside the environment.
+
 ### Workspace panels
 
 | Key | Panel/action |
@@ -267,9 +298,10 @@ Edit `lua/config/settings.lua` to change user-facing global behavior. Its
 `editor` and `files` sections control indentation, text width, line numbers,
 clipboard integration, CursorHold timing, swap files, and backups.
 `formatting` controls format-on-save and its timeout; `ui` controls the
-WhichKey delay; `plugins.check_for_updates` controls Lazy's background update
-check; and `lsp.documentation` controls automatic symbol documentation and
-the hover window. Plugin startup options take effect after restarting Neovim;
+WhichKey delay; `python.environment` controls interpreter restoration and its
+picker; `plugins.check_for_updates` controls Lazy's background update check;
+and `lsp.documentation` controls automatic symbol documentation and the hover
+window. Plugin startup options take effect after restarting Neovim;
 editor, read-only, terminal, and LSP behavior can be refreshed with
 `:SettingsReload`.
 
@@ -295,6 +327,8 @@ tool packages by default. Add custom glob patterns to `include` and `exclude`;
 exclude patterns always win. Save the file and run `:SettingsReload` to apply
 changes to open buffers. Protected buffers use both `readonly` and
 `nomodifiable`; use `:ReadonlyUnlock` for an intentional temporary edit.
+`protect_python_environments` controls protection for environments selected by
+venv-selector.nvim. Bufferline prefixes locked file buffers with ``.
 
 ## Language profiles
 

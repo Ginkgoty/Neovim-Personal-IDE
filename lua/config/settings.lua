@@ -62,12 +62,23 @@ return {
     },
   },
 
+  python = {
+    environment = {
+      -- Remember one interpreter per workspace and restore it automatically.
+      auto_restore = true,
+      notify = true,
+      picker = "telescope",
+    },
+  },
+
   readonly = {
     enabled = true,
 
     -- Protect OS SDK/toolchain headers and Neovim-managed tool packages.
     protect_system_paths = true,
     protect_package_paths = true,
+    -- Protect the complete environment selected by venv-selector.nvim.
+    protect_python_environments = true,
 
     -- true prevents edits entirely; false only warns when writing.
     lock_modifications = true,

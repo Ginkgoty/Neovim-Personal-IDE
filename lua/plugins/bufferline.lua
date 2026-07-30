@@ -19,6 +19,13 @@ return {
                     right_mouse_command = function(buf)
                         require("config.buffers").close(buf)
                     end,
+                    name_formatter = function(buf)
+                        local options = vim.bo[buf.bufnr]
+                        if options.readonly or not options.modifiable then
+                            return " " .. buf.name
+                        end
+                        return buf.name
+                    end,
                     offsets = {
                         {
                             filetype = "NvimTree",
