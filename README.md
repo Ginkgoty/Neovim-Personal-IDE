@@ -44,6 +44,10 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 ## Main features
 
 - LSP and completion for C/C++, C#/.NET, Python, Go, Rust, Java, SQL, and Lua
+- GitHub Copilot inline suggestions (accept with `Ctrl-J`) plus a
+  CodeCompanion chat sidebar (`<leader>lc`); sign in once with
+  `:Copilot auth` and both pick it up. Chats are auto-saved and can be
+  browsed and restored with `<leader>lh`
 - Ruff and ty for modern Python projects
 - DAP debugging with CodeLLDB, GDB, NetCoreDbg, debugpy, Delve, and Java Debug
 - Formatting through Conform: Ruff, clang-format, CSharpier,
@@ -53,7 +57,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 - In-buffer Markdown rendering for headings, lists, tables, links, and code blocks
 - Read-only protection for SDK, toolchain, package-manager, and custom paths
 - Platform-aware C/C++ toolchain, clangd, formatter, and debugger selection
-- GitHub Light by default, with Xcode Light as an alternative
+- GitHub Light by default, with PaperColor Light, Rosé Pine Dawn, and Paper
+  as eye-care alternatives
 
 ## Useful commands
 
@@ -66,7 +71,9 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :FormatToggle       " Toggle format-on-save globally
 :FormatToggle!      " Toggle format-on-save for the current buffer
 :ThemeGithub        " Use GitHub Light
-:ThemeXcode         " Use Xcode Light
+:ThemePaperColor    " Use PaperColor Light
+:ThemeRosePine      " Use Rosé Pine Dawn
+:ThemePaper         " Use Paper
 :ToolchainInfo      " Show the selected MSVC/MinGW toolchain on Windows
 :ClangdInfo         " Show clangd executable, arguments, root, and compile database
 :LanguageInfo       " Show enabled and disabled language support
@@ -81,6 +88,11 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :OverseerShell cmd  " Run an arbitrary command as a managed task
 :OverseerToggle     " Toggle the build/run task list
 :RenderMarkdown buf_toggle " Toggle rendering for the current Markdown buffer
+:Copilot auth       " Sign in to GitHub Copilot (first use)
+:Copilot status     " Show Copilot sign-in and service status
+:CodeCompanionChat Toggle " Toggle the Copilot chat sidebar
+:CodeCompanionHistory " Browse saved chat sessions
+:CodeCompanionSummaries " Browse generated chat summaries
 ```
 
 Press `<Space>` and pause briefly to discover configured shortcuts with which-key.
@@ -99,6 +111,7 @@ Each prefix has one responsibility:
 | `<leader>f` | Find or navigate files, text, symbols, and source/header pairs |
 | `<leader>g` | Git |
 | `<leader>j` | Jump-list history |
+| `<leader>l` | LLM: Copilot chat, chat history, and in-chat actions |
 | `<leader>r` | Build, run, test, and task output |
 | `<leader>u` | UI toggles |
 | `<leader>w` | Windows and splits |
@@ -163,6 +176,8 @@ database is found; it does not guess a C++ standard, macro set, or include path.
 | `<leader>e` | Reveal the current file in nvim-tree and toggle the explorer |
 | `<leader>t` | Toggle the terminal; press `Esc Esc` to leave terminal mode. Prefix a count (`2<leader>t`) for a separate terminal; `:TermSelect` lists open terminals |
 | `<leader>du` | Toggle the DAP UI |
+| `<leader>lc` | Toggle the CodeCompanion (Copilot) chat sidebar |
+| `<leader>lh` | Browse and restore saved chat history |
 | `<leader>gg` | Open the Neogit status split |
 | `<leader>gh` / `<leader>gH` | Current-file/repository history in Diffview |
 | `<leader>gq` | Close the Diffview history/diff view |
@@ -170,6 +185,24 @@ database is found; it does not guess a C++ standard, macro set, or include path.
 | `<leader>rt` | Toggle the bottom task list |
 | `<leader>rl` / `<leader>ro` | Restart/open output for the latest task |
 | `<leader>rs` / `<leader>ra` | Stop the latest running task/select a task action |
+
+Inside the CodeCompanion chat buffer, every chat action lives in the
+`<leader>l` LLM group (buffer-local, so normal buffers are unaffected):
+`<leader>lr` regenerate, `<leader>la` change adapter/model, `<leader>lx`
+clear, `<leader>ly` yank code, `<leader>lb` code block, `<leader>lf` fold
+code, `<leader>lp` toggle system prompt, `<leader>lS` Copilot stats,
+`<leader>lR` clear rules, `<leader>lm` follow-up while streaming,
+`<leader>li` debug info, `<leader>lba`/`<leader>lbd` sync pinned buffers
+(all/diff), `<leader>ltx` reset tool approvals, `<leader>lty` toggle
+auto-approval (YOLO) mode, `<leader>lG` generate a summary of the chat,
+`<leader>lB` browse saved summaries. When the LLM proposes inline changes
+in a normal buffer, review them with `<leader>l2` accept, `<leader>l3`
+reject, `<leader>l1` always accept, `<leader>l4` cancel, and `<leader>lv`
+view the diff. Navigation and control keys keep their plugin defaults:
+`<C-s>` send, `q` stop, `?` options, `]]`/`[[` next/previous message,
+`}`/`{` next/previous chat or diff hunk, `gR` open the file under the
+cursor. Save the current chat manually with `<leader>ls`; auto-save is on,
+so this is rarely needed.
 
 Overseer discovers task definitions from supported project frameworks such as
 Make, Cargo, npm, Just, and `.vscode/tasks.json`. Use `:OverseerShell <command>`

@@ -8,6 +8,10 @@ return {
             require('bufferline').setup {
                 options = {
                     always_show_bufferline = true,
+                    -- Never show the CodeCompanion chat as a tab.
+                    custom_filter = function(buf)
+                        return vim.bo[buf].filetype ~= "codecompanion"
+                    end,
                     offsets = {
                         {
                             filetype = "NvimTree",

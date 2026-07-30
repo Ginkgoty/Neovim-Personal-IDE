@@ -6,6 +6,7 @@ local groups = {
   { "<leader>f", group = "Find / navigate" },
   { "<leader>g", group = "Git" },
   { "<leader>j", group = "Jump history" },
+  { "<leader>l", group = "LLM" },
   { "<leader>r", group = "Run / build" },
   { "<leader>u", group = "UI toggles" },
   { "<leader>w", group = "Windows" },
