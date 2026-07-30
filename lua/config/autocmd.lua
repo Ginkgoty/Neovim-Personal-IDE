@@ -28,6 +28,63 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("gao", telescope.lsp_outgoing_calls, "Code: outgoing calls")
     map("K", vim.lsp.buf.hover, "Code: hover documentation")
 
+    -- Smart symbol navigation: on a definition, list its references;
+    -- anywhere else, jump to the definition (falling back to declaration).
+    -- Uses the leader because most terminals cannot attach Shift to Enter.
+    local function definition_or_references()
+      local clients = vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/definition" })
+      if #clients == 0 then
+        vim.notify("No attached LSP client supports go to definition", vim.log.levels.WARN)
+        return
+      end
+
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      local row, col = cursor[1] - 1, cursor[2]
+      local current_uri = vim.uri_from_bufnr(bufnr)
+      local pending = #clients
+      local on_definition, found_definition = false, false
+
+      local function finish()
+        if on_definition then
+          telescope.lsp_references()
+        elseif found_definition then
+          telescope.lsp_definitions()
+        else
+          vim.lsp.buf.declaration()
+        end
+      end
+
+      for _, client in ipairs(clients) do
+        local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
+        client:request("textDocument/definition", params, function(err, result)
+          if not err and result then
+            local locations = vim.islist(result) and result or { result }
+            for _, location in ipairs(locations) do
+              local uri = location.uri or location.targetUri
+              local range = location.range or location.targetSelectionRange
+              if uri and range then
+                found_definition = true
+                if uri == current_uri then
+                  local first, last = range.start, range["end"]
+                  local after_start = row > first.line or (row == first.line and col >= first.character)
+                  local before_end = row < last.line or (row == last.line and col <= last.character)
+                  if after_start and before_end then
+                    on_definition = true
+                  end
+                end
+              end
+            end
+          end
+          pending = pending - 1
+          if pending == 0 then
+            vim.schedule(finish)
+          end
+        end, bufnr)
+      end
+    end
+
+    map("<leader><CR>", definition_or_references, "Code: references on definition, else go to definition")
+
     map("<leader>cr", vim.lsp.buf.rename, "Code: rename symbol")
     map("<leader>ca", vim.lsp.buf.code_action, "Code: code action")
     map("<leader>fs", telescope.lsp_document_symbols, "Find: document symbols")

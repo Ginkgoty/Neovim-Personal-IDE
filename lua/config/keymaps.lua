@@ -15,10 +15,10 @@ vim.keymap.set('n', '<leader>wh', '<C-w>h', { silent = true, desc = 'Window: foc
 vim.keymap.set('n', '<leader>wj', '<C-w>j', { silent = true, desc = 'Window: focus down' })
 vim.keymap.set('n', '<leader>wk', '<C-w>k', { silent = true, desc = 'Window: focus up' })
 vim.keymap.set('n', '<leader>wl', '<C-w>l', { silent = true, desc = 'Window: focus right' })
-vim.keymap.set('n', '<M-Left>', '<C-w>h', { silent = true, desc = 'Window: focus left' })
-vim.keymap.set('n', '<M-Down>', '<C-w>j', { silent = true, desc = 'Window: focus down' })
-vim.keymap.set('n', '<M-Up>', '<C-w>k', { silent = true, desc = 'Window: focus up' })
-vim.keymap.set('n', '<M-Right>', '<C-w>l', { silent = true, desc = 'Window: focus right' })
+vim.keymap.set('n', '<S-Left>', '<C-w>h', { silent = true, desc = 'Window: focus left' })
+vim.keymap.set('n', '<S-Down>', '<C-w>j', { silent = true, desc = 'Window: focus down' })
+vim.keymap.set('n', '<S-Up>', '<C-w>k', { silent = true, desc = 'Window: focus up' })
+vim.keymap.set('n', '<S-Right>', '<C-w>l', { silent = true, desc = 'Window: focus right' })
 vim.keymap.set('n', '<leader>ws', '<cmd>split<CR>', { silent = true, desc = 'Window: horizontal split' })
 vim.keymap.set('n', '<leader>wv', '<cmd>vsplit<CR>', { silent = true, desc = 'Window: vertical split' })
 vim.keymap.set('n', '<leader>wc', '<cmd>close<CR>', { silent = true, desc = 'Window: close' })
@@ -49,41 +49,55 @@ vim.keymap.set('n', '<leader>bn', '<cmd>BufferLineCycleNext<CR>', {
   silent = true,
   desc = 'Buffer: next',
 })
-vim.keymap.set('n', '<S-Left>', '<cmd>BufferLineCyclePrev<CR>', {
+vim.keymap.set('n', '<M-Left>', '<cmd>BufferLineCyclePrev<CR>', {
   silent = true,
   desc = 'Buffer: previous',
 })
-vim.keymap.set('n', '<S-Right>', '<cmd>BufferLineCycleNext<CR>', {
+vim.keymap.set('n', '<M-Right>', '<cmd>BufferLineCycleNext<CR>', {
   silent = true,
   desc = 'Buffer: next',
 })
--- Custom function: close the current buffer, switch to the next, or confirm exit if no buffers remain
+-- Close the current buffer; quit Neovim when it is the last listed buffer.
 local function close_buffer_or_quit()
-  local buffers = vim.fn.getbufinfo({ buflisted = true })
+  local current = vim.api.nvim_get_current_buf()
 
-  if #buffers > 1 then
-    local current_buf = vim.api.nvim_get_current_buf()
-    -- 尝试切换到下一个缓冲区
-    vim.cmd('bnext')
-    local new_buf = vim.api.nvim_get_current_buf()
+  -- Plugin-owned buffers (explorer, terminal, help, pickers): closing the
+  -- window is safer than deleting a buffer owned by a plugin.
+  if vim.bo[current].buftype ~= '' or not vim.bo[current].buflisted then
+    pcall(vim.cmd, 'close')
+    return
+  end
 
-    -- 如果切换成功且当前缓冲区不是新缓冲区，则删除当前缓冲区
-    if current_buf ~= new_buf then
-      vim.cmd('confirm bdelete ' .. current_buf)
-    else
-      -- 如果切换失败，尝试切换到其他缓冲区（避免死锁）
-      vim.cmd('bprev')
-      vim.cmd('confirm bdelete ' .. current_buf)
-    end
+  if #vim.fn.getbufinfo({ buflisted = true }) > 1 then
+    -- :bdelete keeps the window and moves it to the alternate buffer;
+    -- cancelling the confirm dialog changes nothing.
+    vim.cmd('confirm bdelete')
   else
-    -- 仅剩一个缓冲区时，尝试退出 Neovim
     vim.cmd('confirm qa')
   end
 end
 
 -- Map <leader>bd to close the current buffer or quit if no buffers remain
-vim.keymap.set('n', '<leader>bd', close_buffer_or_quit, { silent = true, desc = 'Buffer: close or quit' })
-vim.keymap.set('n', '<M-x>', close_buffer_or_quit, { silent = true, desc = 'Buffer: close or quit' })
+vim.keymap.set('n', '<leader>bd', close_buffer_or_quit, { silent = true, desc = 'Buffer: close' })
+-- Alt is delivered as a leading ESC byte, so Alt-Backspace works in every
+-- terminal, unlike Shift-Backspace/Delete which need the kitty protocol.
+vim.keymap.set('n', '<M-BS>', close_buffer_or_quit, { silent = true, desc = 'Buffer: close' })
+
+-- Quit the whole editor. Prompts once when buffers are modified:
+-- Yes saves everything (:xa), No (default) discards (:qa!).
+local function save_all_and_quit()
+  if #vim.fn.getbufinfo({ bufmodified = true }) == 0 then
+    vim.cmd('qa')
+    return
+  end
+  local choice = vim.fn.confirm('Save all changes and quit?', '&Yes\n&No', 2)
+  if choice == 1 then
+    vim.cmd('xa')
+  elseif choice == 2 then
+    vim.cmd('qa!')
+  end
+end
+vim.keymap.set('n', '<M-q>', save_all_and_quit, { silent = true, desc = 'Quit: exit (Yes saves all, No discards)' })
 
 
 -- Terminal

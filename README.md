@@ -111,16 +111,24 @@ Useful non-leader aliases are deliberately kept small:
 
 | Key | Action |
 | --- | --- |
-| `Shift-Left` / `Shift-Right` | Previous/next buffer |
-| `Option-Arrow` / `Alt-Arrow` | Focus the adjacent window |
-| `Option-x` / `Alt-x` | Close the current buffer, or quit if it is the last one |
+| `Alt-Left` / `Alt-Right` (macOS: `Option`) | Previous/next buffer |
+| `Shift-Arrow` | Focus the adjacent window |
+| `Alt-Backspace` | Close the current buffer, or quit if it is the last one |
+| `Alt-q` | Quit the editor (prompts to save modified buffers) |
 | `Ctrl-Arrow` | Resize the current window |
 | `F5` / `F10` / `F11` / `F12` | Continue, step over, step into, and step out |
 
-On macOS, the terminal must send Option as Alt. For Ghostty, a practical
-configuration is `macos-option-as-alt = left`, leaving the right Option key
-available for macOS character input. The leader-key equivalents remain
-available when terminal Alt handling is unavailable.
+`Alt-q` quits the editor. With unmodified buffers it exits
+immediately; otherwise it prompts once — `Yes` saves every modified buffer
+(`:xa`), `No` (the default) discards them (`:qa!`).
+
+Alt combinations work in every terminal because Alt is delivered as a leading
+ESC byte; unlike Shift, it needs no enhanced keyboard protocol. On macOS the
+terminal must send Option as Alt (for `Alt-Left`/`Alt-Right` and
+`Alt-Backspace`). For Ghostty, a practical configuration is
+`macos-option-as-alt = left`, leaving the right Option key available for
+macOS character input. The leader-key equivalents remain available when
+terminal Alt handling is unavailable.
 
 ### Code navigation and diagnostics
 
@@ -129,6 +137,7 @@ These mappings are available when an LSP client is attached:
 | Key | Action |
 | --- | --- |
 | `gd` / `gD` | Go to definition/declaration |
+| `<leader><Enter>` | On a definition: find references; otherwise go to definition (falls back to declaration) |
 | `grr` / `gri` / `grt` | Find references/implementations/type definition |
 | `gai` / `gao` | Incoming/outgoing calls |
 | `K` | Hover documentation and inferred type information |
