@@ -53,7 +53,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 - In-buffer Markdown rendering for headings, lists, tables, links, and code blocks
 - Read-only protection for SDK, toolchain, package-manager, and custom paths
 - Platform-aware C/C++ toolchain, clangd, formatter, and debugger selection
-- GitHub Light by default, with MacVim Light as an alternative
+- GitHub Light by default, with Xcode Light as an alternative
 
 ## Useful commands
 
@@ -66,7 +66,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :FormatToggle       " Toggle format-on-save globally
 :FormatToggle!      " Toggle format-on-save for the current buffer
 :ThemeGithub        " Use GitHub Light
-:ThemeMacvim        " Use MacVim Light
+:ThemeXcode         " Use Xcode Light
 :ToolchainInfo      " Show the selected MSVC/MinGW toolchain on Windows
 :ClangdInfo         " Show clangd executable, arguments, root, and compile database
 :LanguageInfo       " Show enabled and disabled language support
@@ -113,19 +113,17 @@ Useful non-leader aliases are deliberately kept small:
 | --- | --- |
 | `Alt-Left` / `Alt-Right` (macOS: `Option`) | Previous/next buffer |
 | `Shift-Arrow` | Focus the adjacent window |
-| `Alt-Backspace` | Close the current buffer, or quit if it is the last one |
-| `Alt-q` | Quit the editor (prompts to save modified buffers) |
 | `Ctrl-Arrow` | Resize the current window |
 | `F5` / `F10` / `F11` / `F12` | Continue, step over, step into, and step out |
 
-`Alt-q` quits the editor. With unmodified buffers it exits
+`<leader>q` quits the editor. With unmodified buffers it exits
 immediately; otherwise it prompts once — `Yes` saves every modified buffer
 (`:xa`), `No` (the default) discards them (`:qa!`).
 
 Alt combinations work in every terminal because Alt is delivered as a leading
 ESC byte; unlike Shift, it needs no enhanced keyboard protocol. On macOS the
-terminal must send Option as Alt (for `Alt-Left`/`Alt-Right` and
-`Alt-Backspace`). For Ghostty, a practical configuration is
+terminal must send Option as Alt (for `Alt-Left`/`Alt-Right`). For Ghostty, a
+practical configuration is
 `macos-option-as-alt = left`, leaving the right Option key available for
 macOS character input. The leader-key equivalents remain available when
 terminal Alt handling is unavailable.
@@ -163,7 +161,7 @@ database is found; it does not guess a C++ standard, macro set, or include path.
 | Key | Panel/action |
 | --- | --- |
 | `<leader>e` | Reveal the current file in nvim-tree and toggle the explorer |
-| `<leader>t` | Toggle the terminal; press `Esc Esc` to leave terminal mode |
+| `<leader>t` | Toggle the terminal; press `Esc Esc` to leave terminal mode. Prefix a count (`2<leader>t`) for a separate terminal; `:TermSelect` lists open terminals |
 | `<leader>du` | Toggle the DAP UI |
 | `<leader>gg` | Open the Neogit status split |
 | `<leader>gh` / `<leader>gH` | Current-file/repository history in Diffview |
@@ -182,6 +180,14 @@ this Neovim configuration.
 ### Global settings and protected files
 
 Edit `lua/config/settings.lua` to change user-facing global behavior. Its
+`terminal.shell` option sets the integrated terminal shell explicitly (for
+example `"pwsh"`, `"powershell"`, `"cmd"`, or a Git Bash path such as
+`"C:/Program Files/Git/bin/bash.exe"`); left unset, Windows auto-detects
+PowerShell 7, then Windows PowerShell 5.1, then cmd, and other platforms use
+`$SHELL`. Its
+`explorer.show_git_ignored` option (default `true`) shows files ignored by
+`.gitignore` (such as `.env`) in nvim-tree; set it to `false` to hide them,
+and restart Neovim to apply. Its
 `readonly` section protects system SDK/toolchain headers and Neovim-managed
 tool packages by default. Add custom glob patterns to `include` and `exclude`;
 exclude patterns always win. Save the file and run `:SettingsReload` to apply

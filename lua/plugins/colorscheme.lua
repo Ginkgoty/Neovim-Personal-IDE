@@ -19,15 +19,15 @@ return {
         vim.cmd.colorscheme("github_light_default")
       end, { desc = "Use GitHub Light" })
 
-      vim.api.nvim_create_user_command("ThemeMacvim", function()
+      vim.api.nvim_create_user_command("ThemeXcode", function()
         vim.o.background = "light"
-        vim.cmd.colorscheme("macvim-light")
-      end, { desc = "Use MacVim Light" })
+        vim.cmd.colorscheme("xcode")
+      end, { desc = "Use Xcode Light" })
     end,
   },
   {
-    "gmist/vim-palette",
-    name = "vim-palette",
+    "lsdrfrx/xcode-theme.nvim",
+    name = "xcode-theme",
     lazy = false,
     priority = 999,
   },

@@ -75,3 +75,18 @@ vim.g.loaded_node_provider = 0
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_python3_provider = 0
 vim.g.loaded_ruby_provider = 0
+
+-- Pasting in a nomodifiable buffer (nvim-tree, picker panels, read-only
+-- protected files) makes Neovim's built-in paste handler call nvim_put and
+-- throw E21 with a full Lua traceback. Show the plain E21 message instead.
+-- Terminal-mode and cmdline pastes are left to the original handler.
+vim.paste = (function(overridden)
+  return function(lines, phase)
+    local mode = vim.api.nvim_get_mode().mode
+    if not vim.bo.modifiable and vim.fn.getcmdtype() == "" and mode:find("^[nvV\22sS\19]") then
+      vim.api.nvim_echo({ { "E21: Cannot make changes, 'modifiable' is off", "ErrorMsg" } }, true, {})
+      return false
+    end
+    return overridden(lines, phase)
+  end
+end)(vim.paste)

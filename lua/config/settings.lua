@@ -20,4 +20,20 @@ return {
       -- Example: "/path/to/vendor/editable-fork/**",
     },
   },
+
+  terminal = {
+    -- Explicit shell for the integrated terminal. nil (or "") auto-detects:
+    -- on Windows PowerShell 7 (pwsh) > Windows PowerShell 5.1 > cmd; other
+    -- platforms use $SHELL. Examples: "pwsh", "powershell", "cmd",
+    -- "C:/Program Files/Git/bin/bash.exe"
+    shell = nil,
+  },
+
+  explorer = {
+    -- true shows files ignored by .gitignore (e.g. .env) in nvim-tree,
+    -- like the VSCode explorer. false hides them (nvim-tree's default).
+    -- Press I in the tree to toggle the filter at runtime. nvim-tree reads
+    -- this once at startup, so restart Neovim after changing it.
+    show_git_ignored = true,
+  },
 }

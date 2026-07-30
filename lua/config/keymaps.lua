@@ -57,8 +57,11 @@ vim.keymap.set('n', '<M-Right>', '<cmd>BufferLineCycleNext<CR>', {
   silent = true,
   desc = 'Buffer: next',
 })
--- Close the current buffer; quit Neovim when it is the last listed buffer.
-local function close_buffer_or_quit()
+-- Close the current buffer. When it is the last listed buffer, its window
+-- shows a fresh empty buffer instead of quitting, so the editor and the
+-- nvim-tree sidebar stay open (VSCode/JetBrains behavior). Use <leader>q
+-- to quit the editor.
+local function close_buffer()
   local current = vim.api.nvim_get_current_buf()
 
   -- Plugin-owned buffers (explorer, terminal, help, pickers): closing the
@@ -68,20 +71,34 @@ local function close_buffer_or_quit()
     return
   end
 
-  if #vim.fn.getbufinfo({ buflisted = true }) > 1 then
-    -- :bdelete keeps the window and moves it to the alternate buffer;
-    -- cancelling the confirm dialog changes nothing.
-    vim.cmd('confirm bdelete')
+  local listed = vim.fn.getbufinfo({ buflisted = true })
+  local replacement
+
+  if #listed <= 1 then
+    -- Last listed buffer: replace it with an empty buffer rather than quit.
+    replacement = vim.api.nvim_create_buf(true, false)
   else
-    vim.cmd('confirm qa')
+    for i, b in ipairs(listed) do
+      if b.bufnr == current then
+        local neighbor = listed[i - 1] or listed[i + 1]
+        replacement = neighbor and neighbor.bufnr or nil
+        break
+      end
+    end
   end
+
+  -- :bdelete closes every window displaying the buffer. Point those windows
+  -- at the replacement buffer first so the editing window survives.
+  if replacement then
+    for _, win in ipairs(vim.fn.win_findbuf(current)) do
+      vim.api.nvim_win_set_buf(win, replacement)
+    end
+  end
+  vim.cmd('confirm bdelete ' .. current)
 end
 
--- Map <leader>bd to close the current buffer or quit if no buffers remain
-vim.keymap.set('n', '<leader>bd', close_buffer_or_quit, { silent = true, desc = 'Buffer: close' })
--- Alt is delivered as a leading ESC byte, so Alt-Backspace works in every
--- terminal, unlike Shift-Backspace/Delete which need the kitty protocol.
-vim.keymap.set('n', '<M-BS>', close_buffer_or_quit, { silent = true, desc = 'Buffer: close' })
+-- Map <leader>bq to close the current buffer
+vim.keymap.set('n', '<leader>bq', close_buffer, { silent = true, desc = 'Buffer: close' })
 
 -- Quit the whole editor. Prompts once when buffers are modified:
 -- Yes saves everything (:xa), No (default) discards (:qa!).
@@ -97,11 +114,16 @@ local function save_all_and_quit()
     vim.cmd('qa!')
   end
 end
-vim.keymap.set('n', '<M-q>', save_all_and_quit, { silent = true, desc = 'Quit: exit (Yes saves all, No discards)' })
+vim.keymap.set('n', '<leader>q', save_all_and_quit, { silent = true, desc = 'Quit: exit (Yes saves all, No discards)' })
 
 
 -- Terminal
-vim.keymap.set('n', '<leader>t', '<cmd>ToggleTerm<CR>', { silent = true, desc = 'Terminal: toggle' })
+-- A count opens a separate terminal tab: 2<leader>t toggles terminal 2.
+-- Use :TermSelect to list and switch between open terminals.
+vim.keymap.set('n', '<leader>t', '<cmd>exe v:count1 . "ToggleTerm"<CR>', {
+  silent = true,
+  desc = 'Terminal: toggle (count = terminal number)',
+})
 vim.keymap.set('t', '<leader>t', '<C-\\><C-n><cmd>ToggleTerm<CR>', {
   silent = true,
   desc = 'Terminal: toggle',
