@@ -16,6 +16,7 @@ return {
       vim.cmd.colorscheme("github_light_default")
 
       vim.api.nvim_create_user_command("ThemeGithub", function()
+        vim.o.background = "light"
         vim.cmd.colorscheme("github_light_default")
       end, { desc = "Use GitHub Light" })
 
@@ -24,15 +25,31 @@ return {
         vim.cmd.colorscheme("PaperColor")
       end, { desc = "Use PaperColor Light" })
 
-      vim.api.nvim_create_user_command("ThemeRosePine", function()
-        vim.o.background = "light"
-        vim.cmd.colorscheme("rose-pine-dawn")
-      end, { desc = "Use Rosé Pine Dawn" })
+      vim.api.nvim_create_user_command("ThemePaperColorDark", function()
+        vim.o.background = "dark"
+        vim.cmd.colorscheme("PaperColor")
+      end, { desc = "Use PaperColor Dark" })
 
       vim.api.nvim_create_user_command("ThemePaper", function()
         vim.o.background = "light"
         vim.cmd.colorscheme("paper")
       end, { desc = "Use Paper" })
+
+      vim.api.nvim_create_user_command("ThemeXcode", function()
+        vim.o.background = "light"
+        vim.cmd.colorscheme("xcodelight")
+      end, { desc = "Use Xcode Light" })
+
+      vim.api.nvim_create_user_command("ThemeOxocarbon", function()
+        vim.o.background = "dark"
+        vim.cmd.colorscheme("oxocarbon")
+      end, { desc = "Use Oxocarbon Dark" })
+
+      vim.api.nvim_create_user_command("ThemeAyu", function()
+        vim.o.background = "dark"
+        vim.cmd.colorscheme("ayu-dark")
+      end, { desc = "Use Ayu Dark" })
+
     end,
   },
   {
@@ -42,15 +59,28 @@ return {
     priority = 999,
   },
   {
-    "rose-pine/neovim",
-    name = "rose-pine",
-    lazy = false,
-    priority = 999,
-  },
-  {
     "yorickpeterse/vim-paper",
     name = "vim-paper",
     lazy = false,
     priority = 999,
+  },
+  {
+    "lunacookies/vim-colors-xcode",
+    lazy = false,
+    priority = 999,
+  },
+  {
+    "nyoom-engineering/oxocarbon.nvim",
+    lazy = false,
+    priority = 999,
+  },
+  {
+    "Shatur/neovim-ayu",
+    name = "neovim-ayu",
+    lazy = false,
+    priority = 999,
+    config = function()
+      require("ayu").setup({})
+    end,
   },
 }

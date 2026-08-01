@@ -253,6 +253,21 @@ function M.show()
       focus_id = "symbol_documentation",
     })
     if vim.api.nvim_win_is_valid(float_win) then
+      -- render-markdown derives code blocks from ColorColumn. Some themes
+      -- (notably PaperColor) use the same surface for ColorColumn and
+      -- CursorLine, which is also a natural inlay-hint background. Keep code
+      -- in this LSP float on the theme's original NormalFloat surface. The
+      -- remap is window-local, so regular Markdown buffers remain unchanged.
+      local code_background = table.concat({
+        "RenderMarkdownCode:NormalFloat",
+        "RenderMarkdownCodeBorder:NormalFloat",
+        "RenderMarkdownCodeInline:NormalFloat",
+      }, ",")
+      local window_highlights = vim.wo[float_win].winhighlight
+      vim.wo[float_win].winhighlight = window_highlights ~= ""
+          and (window_highlights .. "," .. code_background)
+        or code_background
+
       vim.api.nvim_win_set_var(float_win, "textDocument/hover", bufnr)
       configure_hover_window(float_buf, float_win, bufnr, source_win)
     end

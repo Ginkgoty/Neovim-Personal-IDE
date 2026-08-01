@@ -59,8 +59,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 - In-buffer Markdown rendering for headings, lists, tables, links, and code blocks
 - Read-only protection for SDK, toolchain, package-manager, and custom paths
 - Platform-aware C/C++ toolchain, clangd, formatter, and debugger selection
-- GitHub Light by default, with PaperColor Light, Rosé Pine Dawn, and Paper
-  as eye-care alternatives
+- GitHub Light by default; PaperColor, Paper, and Xcode are light alternatives,
+  while PaperColor Dark, Oxocarbon, and Ayu are dark alternatives
 
 ## Useful commands
 
@@ -74,8 +74,11 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :FormatToggle!      " Toggle format-on-save for the current buffer
 :ThemeGithub        " Use GitHub Light
 :ThemePaperColor    " Use PaperColor Light
-:ThemeRosePine      " Use Rosé Pine Dawn
+:ThemePaperColorDark " Use PaperColor Dark
 :ThemePaper         " Use Paper
+:ThemeXcode         " Use Xcode Light
+:ThemeOxocarbon     " Use Oxocarbon Dark
+:ThemeAyu           " Use Ayu Dark
 :ToolchainInfo      " Show the selected MSVC/MinGW toolchain on Windows
 :ClangdInfo         " Show clangd executable, arguments, root, and compile database
 :LanguageInfo       " Show enabled and disabled language support

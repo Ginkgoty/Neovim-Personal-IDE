@@ -31,6 +31,11 @@ return {
   ui = {
     which_key_delay_ms = 300,
 
+    -- Improve LSP type/parameter inlay hints only when the active theme does
+    -- not provide enough contrast. Colors are derived from that theme.
+    inlay_hint_min_contrast = 5,
+    inlay_hint_background_contrast = 1.05,
+
     screenkey = {
       clear_after = 3,
       compress_after = 3,

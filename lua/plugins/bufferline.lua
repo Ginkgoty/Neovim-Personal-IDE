@@ -5,6 +5,18 @@ return {
         dependencies = 'nvim-tree/nvim-web-devicons',
         -- lazy = false -- prevent lazy loading!
         config = function()
+            local title_highlight = "NvimSidebarTitle"
+
+            local function refresh_sidebar_title_highlight()
+                local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+                local fill = vim.api.nvim_get_hl(0, { name = "BufferLineFill", link = false })
+                vim.api.nvim_set_hl(0, title_highlight, {
+                    fg = normal.fg,
+                    bg = fill.bg or normal.bg,
+                    bold = true,
+                })
+            end
+
             require('bufferline').setup {
                 options = {
                     -- Keep the editor tab visible even when only one file is open.
@@ -29,7 +41,7 @@ return {
                         {
                             filetype = "NvimTree",
                             text = "File Explorer",  -- 你可以自定义这里的文本显示
-                            highlight = "Directory",
+                            highlight = title_highlight,
                             text_align = "center",  -- 你可以选择文本对齐方式（"left", "center", "right"）
                             separator = true  -- 如果想要 separator 分隔符
                         },
@@ -37,13 +49,22 @@ return {
                             -- grug-far temporarily occupies the NvimTree sidebar.
                             filetype = "grug-far",
                             text = "Search & Replace",
-                            highlight = "Directory",
+                            highlight = title_highlight,
                             text_align = "center",
                             separator = true,
                         },
                     },
                 }
             }
+
+            refresh_sidebar_title_highlight()
+            vim.api.nvim_create_autocmd("ColorScheme", {
+                group = vim.api.nvim_create_augroup("SidebarTitleThemeSync", { clear = true }),
+                desc = "Keep sidebar titles readable after changing theme",
+                callback = function()
+                    vim.schedule(refresh_sidebar_title_highlight)
+                end,
+            })
         end
     }
 }
