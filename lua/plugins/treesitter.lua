@@ -28,10 +28,10 @@ return {
           -- without duplicating filetype lists in our language profile.
           local parser = vim.treesitter.language.get_lang(args.match)
           if parser and enabled_parsers[parser] then
-            local ok = pcall(vim.treesitter.start, args.buf, parser)
-            if ok then
-              vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-            end
+            -- Tree-sitter owns syntax highlighting. Indentation remains with
+            -- Neovim's mature per-language runtime scripts (C cindent,
+            -- python.vim, and equivalents) instead of one generic algorithm.
+            pcall(vim.treesitter.start, args.buf, parser)
           end
         end,
       })

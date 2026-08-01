@@ -211,6 +211,10 @@ function M.reload()
   if core_options then
     core_options.apply_user_settings()
   end
+  local diagnostics = package.loaded["config.diagnostics"]
+  if diagnostics then
+    diagnostics.setup()
+  end
   load_settings()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then

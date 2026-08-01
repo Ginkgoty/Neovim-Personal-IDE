@@ -28,6 +28,27 @@ return {
     timeout_ms = 2000,
   },
 
+  editing = {
+    completion = {
+      documentation = true,
+      documentation_delay_ms = 300,
+      signature_help = true,
+      -- Disabled by default because inlay hints already provide inline type
+      -- information; enable this only if completion ghost text is desirable.
+      ghost_text = false,
+      -- Keep arbitrary words from the current buffer out of short API queries.
+      buffer_min_keyword_length = 3,
+    },
+  },
+
+  diagnostics = {
+    -- Keep the coding surface quiet: all severities retain signs and
+    -- underlines, while only errors receive an end-of-line message.
+    virtual_text_errors = true,
+    update_in_insert = false,
+    severity_sort = true,
+  },
+
   ui = {
     which_key_delay_ms = 300,
 

@@ -1,5 +1,36 @@
 local M = {}
 
+function M.setup()
+  local settings = require("config.settings").diagnostics or {}
+  vim.diagnostic.config({
+    severity_sort = settings.severity_sort ~= false,
+    update_in_insert = settings.update_in_insert == true,
+    underline = true,
+    signs = {
+      text = {
+        [vim.diagnostic.severity.ERROR] = "",
+        [vim.diagnostic.severity.WARN] = "",
+        [vim.diagnostic.severity.INFO] = "",
+        [vim.diagnostic.severity.HINT] = "󰌵",
+      },
+    },
+    virtual_text = settings.virtual_text_errors == false and false or {
+      severity = { min = vim.diagnostic.severity.ERROR },
+      source = "if_many",
+      spacing = 2,
+      prefix = "●",
+    },
+    -- Full messages remain available through the automatic/current-line
+    -- documentation float and diagnostic tables without moving source lines.
+    virtual_lines = false,
+    float = {
+      border = "rounded",
+      source = "if_many",
+      severity_sort = true,
+    },
+  })
+end
+
 local function quick_fix_at_selection(prompt_bufnr)
   local action_set = require("telescope.actions.set")
   local action_state = require("telescope.actions.state")
@@ -25,6 +56,13 @@ end
 
 function M.telescope(opts)
   opts = vim.deepcopy(opts or {})
+  -- Telescope's diagnostics picker uses the special value 0 for the current
+  -- buffer and deliberately converts every positive buffer handle to nil
+  -- (all buffers). Normalize callers here so a real bufnr cannot accidentally
+  -- widen a document query into workspace diagnostics.
+  if opts.bufnr ~= nil then
+    opts.bufnr = 0
+  end
   local previous_attach = opts.attach_mappings
   opts.attach_mappings = function(prompt_bufnr, map)
     if previous_attach and previous_attach(prompt_bufnr, map) == false then

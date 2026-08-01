@@ -9,8 +9,8 @@ return {
       suggestion = {
         auto_trigger = true,
         keymap = {
-          -- Keep Tab free for snippet jumps (coq leaves it unmapped on
-          -- purpose). Accept the suggestion with CTRL-J instead.
+          -- Keep Tab for completion selection and snippet jumps. Accept the
+          -- separate Copilot ghost suggestion explicitly with CTRL-J.
           accept = "<C-J>",
           next = "<M-]>",
           prev = "<M-[>",

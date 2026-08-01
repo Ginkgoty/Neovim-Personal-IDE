@@ -16,7 +16,7 @@ return {
     },
     opts = {
       completions = {
-        coq = { enabled = true },
+        blink = { enabled = true },
       },
     },
   },

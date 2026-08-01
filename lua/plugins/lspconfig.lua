@@ -12,34 +12,18 @@ return {
         dependencies = {
             { 'mason-org/mason.nvim', opts = {} },
             'neovim/nvim-lspconfig',
-            {
-                'ms-jpq/coq_nvim',
-                branch = 'coq',
-                dependencies = {
-                    { 'ms-jpq/coq.artifacts', branch = 'artifacts' },
-                    { 'ms-jpq/coq.thirdparty', branch = '3p' },
-                },
-            },
+            'saghen/blink.cmp',
         },
-        init = function()
-            vim.g.coq_settings = {
-                display = {
-                    icons = { mode = 'none' },
-                },
-                keymap = {
-                    -- Keep Tab available for Neovim's built-in snippet jumps.
-                    recommended = false,
-                    manual_complete = '<C-Space>',
-                },
-            }
-        end,
         opts = {
             ensure_installed = languages.mason_lsp_servers(),
             automatic_enable = automatic_servers,
         },
         config = function(_, opts)
-            local coq = require('coq')
-            coq.setup()
+            -- Advertise one completion capability set to every language
+            -- server. Server-specific vim.lsp.config() calls below inherit it.
+            vim.lsp.config('*', {
+                capabilities = require('blink.cmp').get_lsp_capabilities(),
+            })
 
             for _, server in ipairs(automatic_servers) do
                 vim.lsp.config(server, {})
@@ -99,39 +83,6 @@ return {
                     },
                 })
             end
-
-            local function completion_key(key, fallback)
-                return function()
-                    if vim.fn.pumvisible() == 1 then
-                        return key
-                    end
-                    return fallback
-                end
-            end
-
-            vim.keymap.set('i', '<C-n>', completion_key('<C-n>', '<C-n>'), {
-                expr = true,
-                silent = true,
-                desc = 'Select next completion item',
-            })
-            vim.keymap.set('i', '<C-p>', completion_key('<C-p>', '<C-p>'), {
-                expr = true,
-                silent = true,
-                desc = 'Select previous completion item',
-            })
-            vim.keymap.set({ 'i', 's' }, '<CR>', function()
-                if vim.fn.pumvisible() == 0 then
-                    return '<CR>'
-                end
-                if vim.fn.complete_info({ 'selected' }).selected == -1 then
-                    return '<C-e><CR>'
-                end
-                return '<C-y>'
-            end, {
-                expr = true,
-                silent = true,
-                desc = 'Confirm completion or insert newline',
-            })
 
             require('mason-lspconfig').setup(opts)
         end,

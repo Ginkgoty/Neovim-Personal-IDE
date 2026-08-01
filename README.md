@@ -59,6 +59,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 - In-buffer Markdown rendering for headings, lists, tables, links, and code blocks
 - Read-only protection for SDK, toolchain, package-manager, and custom paths
 - Platform-aware C/C++ toolchain, clangd, formatter, and debugger selection
+- Predictable coding input with automatic pairs, language-native indentation,
+  semantic completion, signature help, and native snippets
 - GitHub Light by default; PaperColor, Paper, and Xcode are light alternatives,
   while PaperColor Dark, Oxocarbon, and Ayu are dark alternatives
 
@@ -198,6 +200,21 @@ unavailable.
 
 ### Code navigation and diagnostics
 
+Coding completion is shared by every enabled language. Type normally to open
+semantic LSP suggestions, or press `<C-Space>` to request them manually.
+`<Tab>` / `<S-Tab>` select completion items and move through snippet fields;
+`<CR>` confirms only an explicitly selected item and otherwise inserts a normal
+newline. `<C-n>` / `<C-p>` are alternative selection keys, `<C-e>` closes the
+menu, `<C-b>` / `<C-f>` scroll its documentation, and `<C-k>` toggles signature
+help. Parentheses, brackets, braces, and quotes are paired automatically;
+pressing Enter between a pair creates an indented line.
+
+Completion ranks semantic LSP results ahead of snippets, paths, and buffer
+words. Buffer words require at least three characters and never outrank API
+recommendations. Diagnostics keep signs and underlines for every severity but
+show inline text only for errors; complete current-line details and Quick Fix
+availability remain in the automatic documentation float.
+
 These mappings are available when an LSP client is attached:
 
 | Key | Action |
@@ -215,7 +232,7 @@ These mappings are available when an LSP client is attached:
 | `<leader>xc` | Show the complete diagnostic under the cursor |
 | `<leader>xq` | Apply a Quick Fix at the cursor |
 | `<leader>xf` | Current-file diagnostics |
-| `<leader>xa` / `<leader>xA` | Current-project/all-buffer diagnostics |
+| `<leader>xa` | Diagnostics from all loaded buffers |
 | `<leader>xt` / `<leader>xT` | Current-buffer/all-buffer diagnostic table |
 | `<leader>xi` | Show clangd status in a C/C++ buffer |
 | `<leader>uh` | Toggle inlay hints |
@@ -253,7 +270,7 @@ separate LSP rename operation. Source-wide actions such as organize imports and
 fix all are requested explicitly because many servers do not include them in a
 generic contextual-action response.
 
-The `xf`, `xa`, and `xA` diagnostic pickers are actionable lists. Pressing
+The `xf` and `xa` diagnostic pickers are actionable lists. Pressing
 `Enter` opens the selected diagnostic and immediately requests a Quick Fix at
 that location. If the attached language server offers no fix, Neovim keeps the
 cursor at the diagnostic and reports that no action is available. Telescope's
@@ -363,6 +380,8 @@ this Neovim configuration.
 Edit `lua/config/settings.lua` to change user-facing global behavior. Its
 `editor` and `files` sections control indentation, text width, line numbers,
 clipboard integration, CursorHold timing, swap files, and backups.
+`editing.completion` controls documentation, signature help, ghost text, and
+buffer-word noise; `diagnostics` controls live diagnostic presentation;
 `formatting` controls format-on-save and its timeout; `ui` controls the
 WhichKey delay; `python.environment` controls interpreter restoration and its
 picker; `plugins.check_for_updates` controls Lazy's background update check;

@@ -163,18 +163,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end, "Diagnostics: quick fix")
 
     map("<leader>xf", function()
-      require("config.diagnostics").telescope({ bufnr = bufnr })
+      require("config.diagnostics").telescope({ bufnr = 0 })
     end, "Diagnostics: current file")
     map("<leader>xa", function()
-      require("config.diagnostics").telescope({
-        root_dir = require("config.project").telescope_root(bufnr),
-        workspace = true,
-        sort_by = "severity",
-        line_width = "full",
-        prompt_title = "Project Diagnostics",
-      })
-    end, "Diagnostics: current project")
-    map("<leader>xA", function()
       require("config.diagnostics").telescope({
         sort_by = "severity",
         line_width = "full",

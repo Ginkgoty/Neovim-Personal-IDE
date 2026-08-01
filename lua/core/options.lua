@@ -21,6 +21,10 @@ end
 
 M.apply_user_settings()
 
+-- Explicitly load Neovim's maintained filetype plugins and indentation rules.
+-- Language-specific scripts may override the global fallback below.
+vim.cmd("filetype plugin indent on")
+
 -- Show the current mode (e.g., insert, normal)
 vim.opt.showmode = true
 
