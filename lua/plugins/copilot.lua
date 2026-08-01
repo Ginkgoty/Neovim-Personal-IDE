@@ -28,13 +28,13 @@ return {
     },
     keys = {
       {
-        "<leader>lc",
+        "<leader>ac",
         "<cmd>CodeCompanionChat Toggle<CR>",
         mode = { "n", "v" },
         desc = "LLM: toggle chat",
       },
       {
-        "<leader>lh",
+        "<leader>ah",
         "<cmd>CodeCompanionHistory<CR>",
         desc = "LLM: chat history",
       },
@@ -46,35 +46,32 @@ return {
       interactions = {
         chat = {
           keymaps = {
-            -- All LLM actions live under the <leader>l group, matching the
-            -- global keymap architecture. Buffer-local, so normal buffers
-            -- are unaffected. Navigation keys (]], [[, }, {, gR) and
-            -- <C-s>/q/? keep plugin defaults.
-            regenerate = { modes = { n = "<leader>lr" } },
-            change_adapter = { modes = { n = "<leader>la" } },
-            clear = { modes = { n = "<leader>lx" } },
-            yank_code = { modes = { n = "<leader>ly" } },
-            codeblock = { modes = { n = "<leader>lb" } },
-            fold_code = { modes = { n = "<leader>lf" } },
-            system_prompt = { modes = { n = "<leader>lp" } },
-            copilot_stats = { modes = { n = "<leader>lS" } },
-            rules = { modes = { n = "<leader>lR" } },
-            _btw = { modes = { n = "<leader>lm" } },
-            debug = { modes = { n = "<leader>li" } },
-            buffer_sync_all = { modes = { n = "<leader>lba" } },
-            buffer_sync_diff = { modes = { n = "<leader>lbd" } },
-            clear_approvals = { modes = { n = "<leader>ltx" } },
-            yolo_mode = { modes = { n = "<leader>lty" } },
+            -- Chat actions are local to the CodeCompanion buffer. Navigation
+            -- keys (]], [[, }, {, gR) and <C-s>/q/? keep plugin defaults.
+            regenerate = { modes = { n = "<localleader>r" } },
+            change_adapter = { modes = { n = "<localleader>a" } },
+            clear = { modes = { n = "<localleader>x" } },
+            yank_code = { modes = { n = "<localleader>y" } },
+            codeblock = { modes = { n = "<localleader>b" } },
+            fold_code = { modes = { n = "<localleader>f" } },
+            system_prompt = { modes = { n = "<localleader>p" } },
+            copilot_stats = { modes = { n = "<localleader>S" } },
+            rules = { modes = { n = "<localleader>R" } },
+            _btw = { modes = { n = "<localleader>m" } },
+            debug = { modes = { n = "<localleader>i" } },
+            buffer_sync_all = { modes = { n = "<localleader>ba" } },
+            buffer_sync_diff = { modes = { n = "<localleader>bd" } },
+            clear_approvals = { modes = { n = "<localleader>tx" } },
+            yolo_mode = { modes = { n = "<localleader>ty" } },
           },
         },
         shared = {
           keymaps = {
-            -- Inline-diff review actions also join the <leader>l group.
-            view_diff = { modes = { n = "<leader>lv" } },
-            always_accept = { modes = { n = "<leader>l1" } },
-            accept_change = { modes = { n = "<leader>l2" } },
-            reject_change = { modes = { n = "<leader>l3" } },
-            cancel = { modes = { n = "<leader>l4" } },
+            view_diff = { modes = { n = "<localleader>v" } },
+            always_accept = { modes = { n = "<localleader>1" } },
+            accept_change = { modes = { n = "<localleader>2" } },
+            reject_change = { modes = { n = "<localleader>3" } },
+            cancel = { modes = { n = "<localleader>4" } },
           },
         },
       },
@@ -82,19 +79,18 @@ return {
         history = {
           enabled = true,
           opts = {
-            -- History and manual save join the <leader>l LLM group instead
-            -- of the extension's gh/sc defaults.
-            keymap = "<leader>lh",
-            save_chat_keymap = "<leader>ls",
+            -- History and manual save use LocalLeader instead of the
+            -- extension's gh/sc defaults.
+            keymap = "<localleader>h",
+            save_chat_keymap = "<localleader>s",
             auto_save = true,
             picker = "telescope",
             auto_generate_title = true,
-            -- Summary keys join the <leader>l group too. Note: the
-            -- extension falls back to its gcs/gbs defaults when these are
-            -- false, so they must be remapped, not disabled.
+            -- The extension falls back to its gcs/gbs defaults when these
+            -- are false, so they must be remapped, not disabled.
             summary = {
-              create_summary_keymap = "<leader>lG",
-              browse_summaries_keymap = "<leader>lB",
+              create_summary_keymap = "<localleader>G",
+              browse_summaries_keymap = "<localleader>B",
             },
           },
         },
@@ -103,6 +99,11 @@ return {
         chat = {
           window = {
             position = "right",
+            width = function()
+              local ui = require("config.settings").ui or {}
+              local settings = ui.codecompanion or {}
+              return tonumber(settings.chat_width) or 0.36
+            end,
             -- Keep the chat out of the bufferline tab bar.
             buflisted = false,
             opts = {

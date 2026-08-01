@@ -30,5 +30,27 @@ return {
         },
       },
     }
+
+    require("config.sidebar").register("explorer", {
+      find_window = function(tab)
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+          if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "NvimTree" then
+            return win
+          end
+        end
+      end,
+      open = function()
+        local buf = vim.api.nvim_get_current_buf()
+        local path = vim.api.nvim_buf_get_name(buf)
+        if vim.bo[buf].buftype == "" and path ~= "" then
+          vim.cmd.NvimTreeFindFile()
+        else
+          vim.cmd.NvimTreeOpen()
+        end
+      end,
+      close = function()
+        vim.cmd.NvimTreeClose()
+      end,
+    })
   end
 }

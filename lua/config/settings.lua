@@ -47,6 +47,27 @@ return {
       max_width = 80,
       max_height = 40,
     },
+
+    search_replace = {
+      -- grug-far temporarily replaces NvimTree, like VSCode's Search view.
+      sidebar_width = 48,
+      -- Keep each match on one visual line in the narrow search sidebar.
+      wrap_results = false,
+      -- Full g? help opens over the editor instead of inside the sidebar.
+      help_width = 100,
+      help_height = 30,
+      highlights = {
+        -- All result matches, the active source match, and the selected row.
+        result_match = "Search",
+        current_match = "IncSearch",
+        current_result_line = "Visual",
+      },
+    },
+
+    codecompanion = {
+      -- A value below 1 is a fraction of the total editor width.
+      chat_width = 0.36,
+    },
   },
 
   plugins = {
@@ -118,6 +139,10 @@ return {
       max_width = 0.8,
       max_height = 0.5,
       navigation_hints = true,
+      -- Merge diagnostics from the current line into the documentation float.
+      include_diagnostics = true,
+      -- Ask LSP servers for Quick Fix actions and advertise <leader>xq when found.
+      detect_quick_fixes = true,
     },
   },
 }

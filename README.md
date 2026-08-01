@@ -45,15 +45,16 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 
 - LSP and completion for C/C++, C#/.NET, Python, Go, Rust, Java, SQL, and Lua
 - GitHub Copilot inline suggestions (accept with `Ctrl-J`) plus a
-  CodeCompanion chat sidebar (`<leader>lc`); sign in once with
+  CodeCompanion chat sidebar (`<leader>ac`); sign in once with
   `:Copilot auth` and both pick it up. Chats are auto-saved and can be
-  browsed and restored with `<leader>lh`
+  browsed and restored with `<leader>ah`
 - Ruff and ty for modern Python projects, with per-workspace interpreter
   discovery, selection, caching, terminal activation, and DAP synchronization
 - DAP debugging with CodeLLDB, GDB, NetCoreDbg, debugpy, Delve, and Java Debug
 - Formatting through Conform: Ruff, clang-format, CSharpier,
   goimports/gofmt, rustfmt, and StyLua
-- Telescope search, nvim-tree, Neogit/Diffview, Gitsigns, WhichKey, and ToggleTerm
+- Telescope search, grug-far project search/replace, nvim-tree,
+  Neogit/Diffview, Gitsigns, WhichKey, and ToggleTerm
 - Overseer task management for build, run, test, and project task output
 - In-buffer Markdown rendering for headings, lists, tables, links, and code blocks
 - Read-only protection for SDK, toolchain, package-manager, and custom paths
@@ -109,13 +110,13 @@ Each prefix has one responsibility:
 | Prefix | Responsibility |
 | --- | --- |
 | `g...` (no leader) | Navigate code relationships: definitions, references, implementations, and calls |
+| `<leader>a` | AI and Agent features |
 | `<leader>b` | Buffers |
 | `<leader>c` | Code-changing actions: action, rename, format, and CodeLens |
 | `<leader>d` | Debugging |
 | `<leader>f` | Find or navigate files, text, symbols, and source/header pairs |
 | `<leader>g` | Git |
 | `<leader>j` | Jump-list history |
-| `<leader>l` | LLM: Copilot chat, chat history, and in-chat actions |
 | `<leader>r` | Build, run, test, and task output |
 | `<leader>u` | UI toggles |
 | `<leader>w` | Windows and splits |
@@ -124,16 +125,18 @@ Each prefix has one responsibility:
 Bracket mappings such as `[d`/`]d`, `[e`/`]e`, and `[c`/`]c` move to the
 previous/next diagnostic, error, or Git hunk. `K` or `<leader>fd` shows the
 LSP signature, inferred type, and documentation for the symbol under the
-cursor. Press the same key again to focus the documentation window, then use
-normal window scrolling and `q` to close it. Documentation also opens
-automatically after the cursor rests on a symbol for three seconds in normal
-mode. Configure or disable this with `lsp.documentation` in
+cursor. Diagnostics on the current line are merged into that same window. If
+an LSP server offers a Quick Fix, the title also advertises `<leader>xq`.
+Press the same key again to focus the context window, then use normal window
+scrolling and `q` to close it. It also opens automatically after the configured
+idle delay in normal mode. Configure or disable documentation, diagnostics,
+and Quick Fix detection with `lsp.documentation` in
 `lua/config/settings.lua`. The floating-window title advertises `gd`
 definition, `gD` declaration, and `gri` implementation navigation. After
 pressing `K` again to focus the documentation window, those keys return to the
-original source symbol and perform the advertised navigation; `q` closes the
-window normally. Set `lsp.documentation.navigation_hints = false` for a plain
-title.
+original source symbol and perform the advertised navigation. `<leader>xq`
+does the same before opening the Quick Fix picker; `q` closes the window
+normally. Set `lsp.documentation.navigation_hints = false` for a plain title.
 
 Useful non-leader aliases are deliberately kept small:
 
@@ -201,12 +204,65 @@ These mappings are available when an LSP client is attached:
 | `grr` / `gri` / `grt` | Find references/implementations/type definition |
 | `gai` / `gao` | Incoming/outgoing calls |
 | `K` | Hover documentation and inferred type information |
-| `<leader>ca` / `<leader>cr` | Code action/rename |
-| `<leader>xf` | Show the complete diagnostic under the cursor |
-| `<leader>xd` / `<leader>xD` | Buffer/workspace diagnostics |
+| `<leader>ca` | Contextual Code Actions (also works on a visual selection) |
+| `<leader>cr` | Rename the symbol under the cursor |
+| Visual `<leader>ce` | Extract the selected code when supported by the LSP |
+| `<leader>ci` | Inline refactor at the cursor or for the selection |
+| `<leader>co` / `<leader>cF` | Organize imports/fix all issues in the current file |
+| `<leader>xc` | Show the complete diagnostic under the cursor |
+| `<leader>xq` | Apply a Quick Fix at the cursor |
+| `<leader>xf` | Current-file diagnostics |
+| `<leader>xa` / `<leader>xA` | Current-project/all-buffer diagnostics |
+| `<leader>xt` / `<leader>xT` | Current-buffer/all-buffer diagnostic table |
 | `<leader>xi` | Show clangd status in a C/C++ buffer |
 | `<leader>uh` | Toggle inlay hints |
 | `<leader>um` | Toggle rendered/raw Markdown view |
+
+### Project-wide search and replace
+
+Use `<leader>F` in normal mode to open a grug-far search/replace buffer rooted
+at the current project. The same mapping in visual mode pre-fills the search
+field with the selected text. It does not create a dedicated editor split:
+like VSCode's Search view, it temporarily replaces NvimTree in the left
+sidebar. Configure the temporary sidebar width
+under `ui.search_replace` in `lua/config/settings.lua`. Matches use one compact
+visual line in the sidebar, with `…` indicating content outside the visible
+width; set `wrap_results = true` there to restore wrapped lines. Enter the replacement
+and inspect the inline diff before applying it; the panel displays its
+common actions in a compact multi-line header; `g?` opens the complete action
+reference in a wide window over the editor. The selected result remains
+highlighted after a numbered jump transfers focus to the editor, and match
+highlight groups are configurable under `ui.search_replace.highlights`.
+Opening or visiting a result always reuses
+the editor window that was active before the search panel opened, while the
+search panel remains available on the left. Press `<leader>F` again to close
+it, or `<leader>e` to replace it with NvimTree in the same sidebar slot.
+File globs, paths, ripgrep flags, individual-result editing, and search history
+are available in the same panel. `<leader>fg` remains the faster read-only text
+search and navigation entry point. This configuration's local leader is `\`:
+use `\r` to apply Replace, `\s` to sync edited result lines, `\c` to close the
+panel, `Enter` to visit a result, and `g?` for full help.
+
+Code Actions are supplied by the attached language server and remain
+context-sensitive. Extract and inline entries appear only when the server can
+safely transform the cursor position or exact visual selection; rename uses the
+separate LSP rename operation. Source-wide actions such as organize imports and
+fix all are requested explicitly because many servers do not include them in a
+generic contextual-action response.
+
+The `xf`, `xa`, and `xA` diagnostic pickers are actionable lists. Pressing
+`Enter` opens the selected diagnostic and immediately requests a Quick Fix at
+that location. If the attached language server offers no fix, Neovim keeps the
+cursor at the diagnostic and reports that no action is available. Telescope's
+other open mappings remain unchanged.
+
+For a denser, persistent table view, `xt` opens diagnostics for the current
+buffer and `xT` aggregates diagnostics from all loaded buffers. Their UI titles
+use “Current Buffer Diagnostics” and “All Buffers Diagnostics” instead of Vim's
+implementation terms “location list” and “quickfix list”. In these tables,
+columns are display-width aligned and `Enter` performs the native jump; use
+`<leader>xq` at the destination to apply a Quick Fix. Press `a`, `e`, `w`, `i`,
+or `h` inside the table to show All, Error, Warn, Info, or Hint diagnostics.
 
 `<leader>jb` and `<leader>jf` move backward and forward through jumps made in
 the current session and current project. Cross-session entries restored by
@@ -255,11 +311,15 @@ locking editable source trees outside the environment.
 
 | Key | Panel/action |
 | --- | --- |
-| `<leader>e` | Reveal the current file in nvim-tree and toggle the explorer |
+| `<leader>e` | Toggle NvimTree, replacing another active sidebar panel |
 | `<leader>t` | Toggle the terminal; press `Esc Esc` to leave terminal mode. Prefix a count (`2<leader>t`) for a separate terminal; `:TermSelect` lists open terminals |
+| `<leader>wh/j/k/l` | Move focus between windows |
+| `<leader>wH/L` | Increase/decrease the current window width |
+| `<leader>wJ/K` | Increase/decrease the current window height |
+| `<leader>w=` | Equalize all window sizes |
 | `<leader>du` | Toggle the DAP UI |
-| `<leader>lc` | Toggle the CodeCompanion (Copilot) chat sidebar |
-| `<leader>lh` | Browse and restore saved chat history |
+| `<leader>ac` | Toggle the CodeCompanion (Copilot) chat sidebar |
+| `<leader>ah` | Browse and restore saved chat history |
 | `<leader>gg` | Open the Neogit status split |
 | `<leader>gh` / `<leader>gH` | Current-file/repository history in Diffview |
 | `<leader>gq` | Close the Diffview history/diff view |
@@ -268,22 +328,25 @@ locking editable source trees outside the environment.
 | `<leader>rl` / `<leader>ro` | Restart/open output for the latest task |
 | `<leader>rs` / `<leader>ra` | Stop the latest running task/select a task action |
 
-Inside the CodeCompanion chat buffer, every chat action lives in the
-`<leader>l` LLM group (buffer-local, so normal buffers are unaffected):
-`<leader>lr` regenerate, `<leader>la` change adapter/model, `<leader>lx`
-clear, `<leader>ly` yank code, `<leader>lb` code block, `<leader>lf` fold
-code, `<leader>lp` toggle system prompt, `<leader>lS` Copilot stats,
-`<leader>lR` clear rules, `<leader>lm` follow-up while streaming,
-`<leader>li` debug info, `<leader>lba`/`<leader>lbd` sync pinned buffers
-(all/diff), `<leader>ltx` reset tool approvals, `<leader>lty` toggle
-auto-approval (YOLO) mode, `<leader>lG` generate a summary of the chat,
-`<leader>lB` browse saved summaries. When the LLM proposes inline changes
-in a normal buffer, review them with `<leader>l2` accept, `<leader>l3`
-reject, `<leader>l1` always accept, `<leader>l4` cancel, and `<leader>lv`
-view the diff. Navigation and control keys keep their plugin defaults:
+NvimTree and grug-far share one managed sidebar slot. Repeating a panel's key
+closes it; pressing another panel key replaces the current occupant without
+changing the editor window. Additional sidebar plugins can register the same
+`find_window`, `open`, and `close` provider interface in
+`lua/config/sidebar.lua`.
+
+Inside the CodeCompanion chat buffer, every chat action uses LocalLeader
+(`\`, buffer-local, so normal buffers are unaffected): `\r` regenerate,
+`\a` change adapter/model, `\x` clear, `\y` yank code, `\b` code block,
+`\f` fold code, `\p` toggle system prompt, `\S` Copilot stats, `\R` clear
+rules, `\m` follow-up while streaming, `\i` debug info, `\ba`/`\bd` sync
+pinned buffers (all/diff), `\tx` reset tool approvals, `\ty` toggle
+auto-approval (YOLO) mode, `\G` generate a summary of the chat, and `\B`
+browse saved summaries. When the LLM proposes inline changes in a normal
+buffer, review them with `\2` accept, `\3` reject, `\1` always accept,
+`\4` cancel, and `\v` view the diff. Navigation and control keys keep their plugin defaults:
 `<C-s>` send, `q` stop, `?` options, `]]`/`[[` next/previous message,
 `}`/`{` next/previous chat or diff hunk, `gR` open the file under the
-cursor. Save the current chat manually with `<leader>ls`; auto-save is on,
+cursor. Save the current chat manually with `\s`; auto-save is on,
 so this is rarely needed.
 
 Overseer discovers task definitions from supported project frameworks such as
@@ -300,8 +363,10 @@ clipboard integration, CursorHold timing, swap files, and backups.
 `formatting` controls format-on-save and its timeout; `ui` controls the
 WhichKey delay; `python.environment` controls interpreter restoration and its
 picker; `plugins.check_for_updates` controls Lazy's background update check;
-and `lsp.documentation` controls automatic symbol documentation and the hover
-window. Plugin startup options take effect after restarting Neovim;
+`ui.codecompanion.chat_width` controls the right-side AI chat width; and
+`lsp.documentation` controls the automatic symbol context window, including
+documentation, line diagnostics, and Quick Fix detection. Plugin startup
+options take effect after restarting Neovim;
 editor, read-only, terminal, and LSP behavior can be refreshed with
 `:SettingsReload`.
 

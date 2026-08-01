@@ -7,9 +7,8 @@ return {
         config = function()
             require('bufferline').setup {
                 options = {
-                    -- The bar represents open files, not windows or plugin
-                    -- panels. Hide it when fewer than two files are open.
-                    always_show_bufferline = false,
+                    -- Keep the editor tab visible even when only one file is open.
+                    always_show_bufferline = true,
                     custom_filter = function(buf)
                         return require("config.buffers").is_file(buf)
                     end,
@@ -33,7 +32,15 @@ return {
                             highlight = "Directory",
                             text_align = "center",  -- 你可以选择文本对齐方式（"left", "center", "right"）
                             separator = true  -- 如果想要 separator 分隔符
-                        }
+                        },
+                        {
+                            -- grug-far temporarily occupies the NvimTree sidebar.
+                            filetype = "grug-far",
+                            text = "Search & Replace",
+                            highlight = "Directory",
+                            text_align = "center",
+                            separator = true,
+                        },
                     },
                 }
             }

@@ -19,6 +19,22 @@ vim.keymap.set('n', '<leader>wh', '<C-w>h', { silent = true, desc = 'Window: foc
 vim.keymap.set('n', '<leader>wj', '<C-w>j', { silent = true, desc = 'Window: focus down' })
 vim.keymap.set('n', '<leader>wk', '<C-w>k', { silent = true, desc = 'Window: focus up' })
 vim.keymap.set('n', '<leader>wl', '<C-w>l', { silent = true, desc = 'Window: focus right' })
+vim.keymap.set('n', '<leader>wH', '<cmd>vertical resize +2<CR>', {
+  silent = true,
+  desc = 'Window: increase width',
+})
+vim.keymap.set('n', '<leader>wL', '<cmd>vertical resize -2<CR>', {
+  silent = true,
+  desc = 'Window: decrease width',
+})
+vim.keymap.set('n', '<leader>wJ', '<cmd>resize +2<CR>', {
+  silent = true,
+  desc = 'Window: increase height',
+})
+vim.keymap.set('n', '<leader>wK', '<cmd>resize -2<CR>', {
+  silent = true,
+  desc = 'Window: decrease height',
+})
 vim.keymap.set('n', '<S-Left>', '<C-w>h', { silent = true, desc = 'Window: focus left' })
 vim.keymap.set('n', '<S-Down>', '<C-w>j', { silent = true, desc = 'Window: focus down' })
 vim.keymap.set('n', '<S-Up>', '<C-w>k', { silent = true, desc = 'Window: focus up' })
@@ -35,7 +51,9 @@ vim.keymap.set('n', '<C-Left>', '<cmd>vertical resize +2<CR>', { silent = true, 
 vim.keymap.set('n', '<C-Right>', '<cmd>vertical resize -2<CR>', { silent = true, desc = 'Window: decrease width' })
 
 -- Explorer
-vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeFindFileToggle<CR>', {
+vim.keymap.set('n', '<leader>e', function()
+  require('config.sidebar').toggle('explorer')
+end, {
   silent = true,
   desc = 'Explorer: reveal current file / toggle',
 })

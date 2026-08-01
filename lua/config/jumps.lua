@@ -1,24 +1,8 @@
 local M = {}
 
-local markers = { ".git", "CMakeLists.txt", "Cargo.toml", "go.mod", "pyproject.toml", "package.json" }
-
 local function settings()
   local navigation = require("config.settings").navigation or {}
   return navigation.jump_history or {}
-end
-
-local function project_root()
-  local name = vim.api.nvim_buf_get_name(0)
-  local start = name ~= "" and vim.fs.dirname(name) or vim.fn.getcwd()
-  return vim.fs.normalize(vim.fs.root(start, markers) or vim.fn.getcwd())
-end
-
-local function inside(root, path)
-  if path == "" then
-    return false
-  end
-  local relative = vim.fs.relpath(root, vim.fs.normalize(path))
-  return relative ~= nil and relative ~= ".." and not vim.startswith(relative, "../")
 end
 
 local function entry_path(entry)
@@ -41,14 +25,15 @@ end
 function M.navigate(direction)
   local opts = settings()
   local key = direction == "back" and "<C-o>" or "<C-i>"
-  local root = project_root()
+  local project = require("config.project")
+  local root = project.root()
   local result = vim.fn.getjumplist()
   local entries, index = result[1], result[2]
 
   if direction == "back" then
     for target = index, 1, -1 do
       local path = entry_path(entries[target])
-      if path and (opts.project_only == false or inside(root, path)) then
+      if path and (opts.project_only == false or project.contains(root, path)) then
         execute_jump(key, index - target + 1)
         return
       end
@@ -56,7 +41,7 @@ function M.navigate(direction)
   else
     for target = index + 2, #entries do
       local path = entry_path(entries[target])
-      if path and (opts.project_only == false or inside(root, path)) then
+      if path and (opts.project_only == false or project.contains(root, path)) then
         execute_jump(key, target - index - 1)
         return
       end

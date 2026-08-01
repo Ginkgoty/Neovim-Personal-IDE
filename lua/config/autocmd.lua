@@ -19,6 +19,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
       })
     end
 
+    local function map_modes(modes, lhs, rhs, desc)
+      vim.keymap.set(modes, lhs, rhs, {
+        buffer = bufnr,
+        silent = true,
+        desc = desc,
+      })
+    end
+
     map("gd", telescope.lsp_definitions, "Code: go to definition")
     map("gD", vim.lsp.buf.declaration, "Code: go to declaration")
     map("grr", telescope.lsp_references, "Code: find references")
@@ -92,8 +100,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
     map("<leader><CR>", definition_or_references, "Code: references on definition, else go to definition")
 
+    local function code_action(kind)
+      return function()
+        vim.lsp.buf.code_action(kind and { context = { only = { kind } } } or nil)
+      end
+    end
+
     map("<leader>cr", vim.lsp.buf.rename, "Code: rename symbol")
-    map("<leader>ca", vim.lsp.buf.code_action, "Code: code action")
+    map_modes({ "n", "v" }, "<leader>ca", code_action(), "Code: contextual action")
+    map_modes({ "n", "v" }, "<leader>ci", code_action(vim.lsp.protocol.CodeActionKind.RefactorInline),
+      "Code: inline refactor")
+    map_modes("v", "<leader>ce", code_action(vim.lsp.protocol.CodeActionKind.RefactorExtract),
+      "Code: extract selection")
+    map("<leader>co", code_action(vim.lsp.protocol.CodeActionKind.SourceOrganizeImports),
+      "Code: organize imports")
+    map("<leader>cF", code_action("source.fixAll"), "Code: fix all")
     map("<leader>fs", telescope.lsp_document_symbols, "Find: document symbols")
     map("<leader>fS", telescope.lsp_workspace_symbols, "Find: workspace symbols")
 
@@ -127,7 +148,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("[d", diagnostic_jump(-1), "Diagnostics: previous")
     map("]d", diagnostic_jump(1), "Diagnostics: next")
 
-    map("<leader>xf", function()
+    map("<leader>xc", function()
       vim.diagnostic.open_float({
         scope = "cursor",
         focusable = true,
@@ -135,16 +156,39 @@ vim.api.nvim_create_autocmd("LspAttach", {
       })
     end, "Diagnostics: show under cursor")
 
-    map("<leader>xd", function()
-      telescope.diagnostics({ bufnr = bufnr })
-    end, "Diagnostics: current buffer")
-    map("<leader>xD", telescope.diagnostics, "Diagnostics: workspace")
-    map("<leader>xl", function()
-      vim.diagnostic.setloclist({ open = true })
-    end, "Diagnostics: location list")
     map("<leader>xq", function()
-      vim.diagnostic.setqflist({ open = true })
-    end, "Diagnostics: quickfix list")
+      vim.lsp.buf.code_action({
+        context = { only = { vim.lsp.protocol.CodeActionKind.QuickFix } },
+      })
+    end, "Diagnostics: quick fix")
+
+    map("<leader>xf", function()
+      require("config.diagnostics").telescope({ bufnr = bufnr })
+    end, "Diagnostics: current file")
+    map("<leader>xa", function()
+      require("config.diagnostics").telescope({
+        root_dir = require("config.project").telescope_root(bufnr),
+        workspace = true,
+        sort_by = "severity",
+        line_width = "full",
+        prompt_title = "Project Diagnostics",
+      })
+    end, "Diagnostics: current project")
+    map("<leader>xA", function()
+      require("config.diagnostics").telescope({
+        sort_by = "severity",
+        line_width = "full",
+        prompt_title = "All Buffer Diagnostics",
+      })
+    end, "Diagnostics: all buffers")
+
+    map("<leader>xt", function()
+      require("config.diagnostics").open_buffer_table(bufnr)
+    end, "Diagnostics: current buffer table")
+
+    map("<leader>xT", function()
+      require("config.diagnostics").open_all_table()
+    end, "Diagnostics: all buffers table")
 
     if client and client.name == "clangd" then
       map("<leader>fh", "<cmd>LspClangdSwitchSourceHeader<CR>", "Find: alternate source/header")
