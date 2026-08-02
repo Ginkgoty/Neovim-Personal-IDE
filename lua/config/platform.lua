@@ -11,6 +11,8 @@ local cached_java_major
 local java_checked = false
 local clang_resource_dirs = {}
 local compiler_families = {}
+local gcc_versions = {}
+local gcc_cpp_standards = {}
 local standard_include_contexts
 local type_support = {}
 
@@ -296,6 +298,15 @@ function M.standard_header_context(filename)
   local driver = language == "cpp" and best_context.cxx_compiler or best_context.compiler
   local include_paths = language == "cpp" and best_context.cpp or best_context.c
   local fallback_flags = { "-x", language == "cpp" and "c++-header" or "c-header" }
+  local gcc_version = M.gcc_version(driver)
+  if gcc_version then
+    fallback_flags[#fallback_flags + 1] = "-fgnuc-version=" .. gcc_version
+    fallback_flags[#fallback_flags + 1] = "-U__clang__"
+    local standard = language == "cpp" and M.gcc_default_cpp_standard(driver) or nil
+    if standard then
+      fallback_flags[#fallback_flags + 1] = "-std=" .. standard
+    end
+  end
   if best_context.target and best_context.target ~= "" and M.compiler_family(driver) == "clang" then
     fallback_flags[#fallback_flags + 1] = "--target=" .. best_context.target
   end
@@ -611,16 +622,71 @@ function M.compiler_family(compiler)
   end
   local basename = vim.fs.basename(compiler):lower():gsub("%.exe$", "")
   local family
-  if basename:match "^g%+%+[%d%.%-]*$" or basename:match "^gcc[%d%.%-]*$" then
-    family = "gcc"
-  elseif basename:match "^clang%+%+[%d%.%-]*$" or basename:match "^clang[%d%.%-]*$" then
-    family = "clang"
-  elseif basename == "cc" or basename == "c++" then
-    local version = run { compiler, "--version" } or ""
-    family = version:lower():find("clang", 1, true) and "clang" or version:lower():find("gcc", 1, true) and "gcc" or nil
+  local gcc_name = basename:match "^g%+%+[%d%.%-]*$" or basename:match "^gcc[%d%.%-]*$"
+  local clang_name = basename:match "^clang%+%+[%d%.%-]*$" or basename:match "^clang[%d%.%-]*$"
+  if gcc_name or clang_name or basename == "cc" or basename == "c++" then
+    -- Apple ships gcc/g++ compatibility stubs that are actually Clang. The
+    -- executable name is therefore only a candidate; implementation identity
+    -- comes from the driver's own version output.
+    local version = (run { compiler, "--version" } or ""):lower()
+    if version:find("clang", 1, true) then
+      family = "clang"
+    elseif version:find("gcc", 1, true) or version:find("free software foundation", 1, true) then
+      family = "gcc"
+    end
   end
   compiler_families[compiler] = family or false
   return family
+end
+
+function M.gcc_version(compiler)
+  if not compiler or M.compiler_family(compiler) ~= "gcc" then
+    return nil
+  end
+  if gcc_versions[compiler] ~= nil then
+    return gcc_versions[compiler] or nil
+  end
+  local version = run { compiler, "-dumpfullversion", "-dumpversion" }
+  version = version and version:match "^(%d+%.?%d*%.?%d*)" or nil
+  gcc_versions[compiler] = version or false
+  return gcc_versions[compiler] or nil
+end
+
+function M.gcc_default_cpp_standard(compiler)
+  if not compiler or M.compiler_family(compiler) ~= "gcc" then
+    return nil
+  end
+  if gcc_cpp_standards[compiler] ~= nil then
+    return gcc_cpp_standards[compiler] or nil
+  end
+  local result = vim
+    .system({ compiler, "-dM", "-E", "-x", "c++", "-" }, {
+      stdin = "",
+      text = true,
+    })
+    :wait()
+  local output = result.code == 0 and result.stdout or ""
+  local value = tonumber(output:match "#define%s+__cplusplus%s+(%d+)L?")
+  local year
+  if value and value >= 202400 then
+    year = "26"
+  elseif value and value >= 202100 then
+    year = "23"
+  elseif value and value >= 202002 then
+    year = "20"
+  elseif value and value >= 201703 then
+    year = "17"
+  elseif value and value >= 201402 then
+    year = "14"
+  elseif value and value >= 201103 then
+    year = "11"
+  elseif value and value >= 199711 then
+    year = "98"
+  end
+  local strict = output:match "#define%s+__STRICT_ANSI__%s+1" ~= nil
+  local standard = year and ((strict and "c++" or "gnu++") .. year) or nil
+  gcc_cpp_standards[compiler] = standard or false
+  return gcc_cpp_standards[compiler] or nil
 end
 
 function M.trusted_query_driver(compiler, project_root)

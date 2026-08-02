@@ -333,6 +333,16 @@ displacing Apple Clang as the default; directly opened GCC/libstdc++ headers
 receive a generated cache-local compilation database whose command names their
 owning GCC driver. clangd then uses QueryDriver for the GCC target and include
 search paths; clangd's parser itself necessarily remains Clang-based.
+For GCC-owned standalone headers and GCC entries in an argument-array
+`compile_commands.json`, the detected `-dumpfullversion` is supplied to clangd
+as `-fgnuc-version=<version>` through its in-memory compilation-command
+extension; `__clang__` is undefined in that same confirmed-GCC branch so
+conditional compilation does not simultaneously select Clang behavior.
+Generated project databases are never modified.
+For G++ commands without an explicit `-std=`, the default dialect is queried
+from that driver's `__cplusplus` and `__STRICT_ANSI__` predefined macros and
+translated for clangd (for example GCC 16 currently yields `gnu++20`). Explicit
+project standards remain untouched; GCC C, Clang, and MSVC are unaffected.
 On Windows, the same standalone mechanism dynamically discovers MinGW include
 roots through GCC/G++, or builds an MSVC-style command from the `cl.exe`
 toolset selected by `vswhere` plus the newest installed Windows SDK (UCRT,

@@ -4,6 +4,7 @@ local database_names = { "compile_commands.json", "compile_flags.txt" }
 local warned_roots = {}
 local standalone_roots = {}
 local standalone_contexts = {}
+local command_driver
 local root_markers = {
   ".clangd",
   ".clang-tidy",
@@ -48,11 +49,67 @@ end
 
 function M.before_init(params, config)
   local context = standalone_contexts[config.root_dir]
-  if not context then
+  params.initializationOptions = params.initializationOptions or {}
+  if context then
+    params.initializationOptions.fallbackFlags = vim.deepcopy(context.fallback_flags)
+  end
+
+  local database = M.find_compilation_database(config.root_dir)
+  if not database or vim.fs.basename(database) ~= "compile_commands.json" then
     return
   end
-  params.initializationOptions = params.initializationOptions or {}
-  params.initializationOptions.fallbackFlags = vim.deepcopy(context.fallback_flags)
+  local ok, entries = pcall(vim.json.decode, table.concat(vim.fn.readfile(database), "\n"))
+  if not ok or type(entries) ~= "table" then
+    return
+  end
+
+  local platform = require "config.platform"
+  local changes = {}
+  for _, entry in ipairs(entries) do
+    local arguments = type(entry.arguments) == "table" and vim.deepcopy(entry.arguments) or nil
+    local driver = command_driver(entry)
+    if driver and not platform.is_absolute(driver) then
+      local resolved = vim.fn.exepath(driver)
+      driver = resolved ~= "" and resolved or vim.fs.joinpath(entry.directory or config.root_dir, driver)
+    end
+    driver = driver and vim.fs.normalize(driver) or nil
+    local version = driver and platform.trusted_query_driver(driver, config.root_dir) and platform.gcc_version(driver)
+      or nil
+    if arguments and version and type(entry.file) == "string" then
+      local flag = "-fgnuc-version=" .. version
+      local version_present, clang_undef_present, standard_present = false, false, false
+      for _, argument in ipairs(arguments) do
+        if type(argument) == "string" and argument:match "^%-fgnuc%-version=" then
+          version_present = true
+        elseif argument == "-U__clang__" then
+          clang_undef_present = true
+        elseif type(argument) == "string" and argument:match "^%-%-?std=" then
+          standard_present = true
+        end
+      end
+      if not version_present then
+        arguments[#arguments + 1] = flag
+      end
+      if not clang_undef_present then
+        arguments[#arguments + 1] = "-U__clang__"
+      end
+      local basename = vim.fs.basename(driver):lower():gsub("%.exe$", "")
+      local cxx_driver = basename:match "^g%+%+[%d%.%-]*$" or basename == "c++"
+      local standard = cxx_driver and not standard_present and platform.gcc_default_cpp_standard(driver) or nil
+      if standard then
+        arguments[#arguments + 1] = "-std=" .. standard
+      end
+      local filename = platform.is_absolute(entry.file) and vim.fs.normalize(entry.file)
+        or vim.fs.normalize(vim.fs.joinpath(entry.directory or config.root_dir, entry.file))
+      changes[filename] = {
+        workingDirectory = entry.directory or config.root_dir,
+        compilationCommand = arguments,
+      }
+    end
+  end
+  if not vim.tbl_isempty(changes) then
+    params.initializationOptions.compilationDatabaseChanges = changes
+  end
 end
 
 local function standalone_database(context)
@@ -81,7 +138,7 @@ local function standalone_database(context)
   return directory
 end
 
-local function command_driver(entry)
+command_driver = function(entry)
   if type(entry.arguments) == "table" and type(entry.arguments[1]) == "string" then
     return entry.arguments[1]
   end
