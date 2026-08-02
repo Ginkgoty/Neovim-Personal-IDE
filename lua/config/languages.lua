@@ -11,6 +11,8 @@ M.enabled_languages = {
   rust = true,
   java = true,
   sql = true,
+  json = true,
+  javascript = true,
   -- Modern .NET development is supported across Windows, macOS, and Linux.
   csharp = true,
 }
@@ -31,6 +33,9 @@ M.prerequisites = {
   java = function()
     return platform.has_java_21()
   end,
+  javascript = function()
+    return vim.fn.executable("node") == 1 and vim.fn.executable("npm") == 1
+  end,
 }
 
 M.prerequisite_names = {
@@ -39,6 +44,7 @@ M.prerequisite_names = {
   go = "Go SDK (go)",
   rust = "Rust toolchain (rustc + cargo)",
   java = "JDK 21+ (java + javac)",
+  javascript = "Node.js toolchain (node + npm)",
 }
 
 M.display_names = {
@@ -47,6 +53,7 @@ M.display_names = {
   go = "Go",
   rust = "Rust",
   java = "Java",
+  javascript = "JavaScript/TypeScript",
 }
 
 local cpp_install_url = platform.is_windows and "https://visualstudio.microsoft.com/downloads/"
@@ -75,6 +82,10 @@ M.install_guides = {
   java = {
     message = "Install JDK 21 or newer and make both java and javac available on PATH.",
     url = "https://dev.java/download/",
+  },
+  javascript = {
+    message = "Install the current Node.js LTS release, including npm.",
+    url = "https://nodejs.org/en/download",
   },
 }
 
@@ -127,6 +138,22 @@ M.definitions = {
   sql = {
     lsp = { "sqls" },
     treesitter = { "sql" },
+  },
+  json = {
+    lsp = { "jsonls" },
+    -- jsonc is a filetype handled by the json parser, not a separate parser.
+    treesitter = { "json" },
+  },
+  javascript = {
+    lsp = { "ts_ls", "eslint" },
+    mason_tools = { "prettier", "js-debug-adapter" },
+    formatters = {
+      javascript = { "prettier" },
+      javascriptreact = { "prettier" },
+      typescript = { "prettier" },
+      typescriptreact = { "prettier" },
+    },
+    treesitter = { "javascript", "typescript", "tsx", "jsdoc" },
   },
   csharp = {
     lsp = { "csharp_ls" },

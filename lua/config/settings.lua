@@ -28,6 +28,18 @@ return {
     timeout_ms = 2000,
   },
 
+  tasks = {
+    -- Overseer's built-in Make provider only searches upward. Check these
+    -- project-root children for out-of-source configure/CMake builds too.
+    build_directories = { "build", "Build", "out", "cmake-build-debug", "cmake-build-release" },
+    make = {
+      -- Capture real compiler invocations for clangd. Bear is a host build
+      -- tool and must be installed through the OS package manager.
+      use_bear = true,
+      append_existing_compilation_database = true,
+    },
+  },
+
   editing = {
     completion = {
       documentation = true,
@@ -157,6 +169,22 @@ return {
   },
 
   lsp = {
+    -- Neovim's recursive workspace file watcher can exhaust file descriptors
+    -- in large projects on macOS/Windows. Language servers still watch/index
+    -- files internally; open-buffer diagnostics and navigation are unaffected.
+    workspace_file_watching = false,
+
+    document_links = {
+      -- Underline only include paths that clangd resolved to a real target.
+      -- Buffer-local gx opens the target inside Neovim rather than delegating
+      -- file:// links to the operating system's external application handler.
+      enabled = true,
+      -- clangd semantic tokens underline macro definitions and uses as a
+      -- visual promise that <leader><Enter> supports bidirectional navigation.
+      underline_macros = true,
+      refresh_delay_ms = 250,
+    },
+
     documentation = {
       -- K and <leader>fd remain available when automatic display is disabled.
       auto_show = true,

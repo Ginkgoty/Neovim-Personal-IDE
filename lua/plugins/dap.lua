@@ -119,6 +119,53 @@ return {
         }
       end
 
+      if languages.enabled("javascript") and languages.available("javascript") then
+        dap.adapters["pwa-node"] = {
+          type = "server",
+          host = "127.0.0.1",
+          port = "${port}",
+          executable = {
+            command = platform.mason_bin("js-debug-adapter"),
+            args = { "${port}" },
+          },
+        }
+
+        local attach_node = {
+          name = "Attach to Node.js process",
+          type = "pwa-node",
+          request = "attach",
+          processId = require("dap.utils").pick_process,
+          cwd = "${workspaceFolder}",
+          sourceMaps = true,
+          skipFiles = { "<node_internals>/**" },
+        }
+        local launch_compiled = {
+          name = "Launch compiled JavaScript",
+          type = "pwa-node",
+          request = "launch",
+          program = function()
+            return vim.fn.input("JavaScript entry point: ", platform.join(vim.fn.getcwd(), "dist", ""), "file")
+          end,
+          cwd = "${workspaceFolder}",
+          sourceMaps = true,
+          skipFiles = { "<node_internals>/**" },
+        }
+        local launch_current = {
+          name = "Launch current JavaScript file",
+          type = "pwa-node",
+          request = "launch",
+          program = "${file}",
+          cwd = "${workspaceFolder}",
+          sourceMaps = true,
+          skipFiles = { "<node_internals>/**" },
+        }
+
+        dap.configurations.javascript = { launch_current, attach_node }
+        dap.configurations.javascriptreact = { launch_current, attach_node }
+        dap.configurations.typescript = { launch_compiled, attach_node }
+        dap.configurations.typescriptreact = { launch_compiled, attach_node }
+      end
+
       if languages.enabled("go") and languages.available("go") then
         vim.keymap.set("n", "<leader>dg", function()
           require("dap-go").debug_test()

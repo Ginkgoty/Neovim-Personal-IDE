@@ -26,13 +26,16 @@ end
 
 local function detect()
   if not platform.is_windows then
-    return nil
+    return vim.o.shell
   end
   for _, name in ipairs({ "pwsh", "powershell", "cmd" }) do
     if executable(name) then
       return name
     end
   end
+  -- Never return nil to toggleterm: it inspects the configured shell before
+  -- spawning the terminal process. &shell is Neovim's last-resort fallback.
+  return vim.o.shell
 end
 
 function M.shell()

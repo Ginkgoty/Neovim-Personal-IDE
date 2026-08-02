@@ -28,7 +28,6 @@ local function contrast(first, second)
   return (lighter + 0.05) / (darker + 0.05)
 end
 
-
 local function mix(first, second, amount)
   local a, b = channels(first), channels(second)
   local result = {}
@@ -61,7 +60,7 @@ local function distinct_background(preferred, normal, surface_minimum)
 
   -- Reuse quiet surfaces from the colorscheme before considering stronger
   -- selection colors. This keeps hints distinct without inventing a palette.
-  for _, name in ipairs({ "CursorLine", "Pmenu", "NormalFloat", "Visual", "StatusLine" }) do
+  for _, name in ipairs { "CursorLine", "Pmenu", "NormalFloat", "Visual", "StatusLine" } do
     local candidate = highlight(name).bg
     if candidate and contrast(candidate, normal) >= surface_minimum then
       return candidate
@@ -74,12 +73,10 @@ local function refresh_inlay_hints()
   local options = require("config.settings").ui or {}
   local minimum = options.inlay_hint_min_contrast or 4.5
   local background_minimum = options.inlay_hint_background_contrast or 1.05
-  local normal = highlight("Normal")
-  local inlay = highlight("LspInlayHint")
-  local comment = highlight("Comment")
-  local background = normal.bg
-      and normal.fg
-      and distinct_background(inlay.bg, normal.bg, background_minimum)
+  local normal = highlight "Normal"
+  local inlay = highlight "LspInlayHint"
+  local comment = highlight "Comment"
+  local background = normal.bg and normal.fg and distinct_background(inlay.bg, normal.bg, background_minimum)
     or inlay.bg
   local preferred = inlay.fg or comment.fg or normal.fg
 
@@ -100,11 +97,15 @@ end
 
 function M.setup()
   refresh_inlay_hints()
+  require("config.macro_links").setup()
   vim.api.nvim_create_autocmd("ColorScheme", {
     group = vim.api.nvim_create_augroup("ReadableLspHighlights", { clear = true }),
     desc = "Keep LSP inlay hints readable with the active colorscheme",
     callback = function()
-      vim.schedule(refresh_inlay_hints)
+      vim.schedule(function()
+        refresh_inlay_hints()
+        vim.api.nvim_set_hl(0, "LspMacroLink", { underline = true })
+      end)
     end,
   })
 end

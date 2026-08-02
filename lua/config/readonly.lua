@@ -32,14 +32,14 @@ end
 
 local function system_patterns()
   local patterns = {}
-  if vim.fn.has("macunix") == 1 then
+  if vim.fn.has "macunix" == 1 then
     append(patterns, "/Applications/Xcode.app/**")
     append(patterns, "/Library/Developer/CommandLineTools/**")
     append(patterns, "/System/Library/Frameworks/**")
     append(patterns, "/usr/include/**")
     append(patterns, "/opt/homebrew/Cellar/**/include/**")
     append(patterns, "/usr/local/Cellar/**/include/**")
-  elseif vim.fn.has("win32") == 1 then
+  elseif vim.fn.has "win32" == 1 then
     local program_files = vim.env.ProgramFiles
     local program_files_x86 = vim.env["ProgramFiles(x86)"]
     if program_files then
@@ -60,7 +60,7 @@ local function system_patterns()
 end
 
 local function package_patterns()
-  local data = normalize(vim.fn.stdpath("data"))
+  local data = normalize(vim.fn.stdpath "data")
   return {
     data .. "/mason/packages/**",
     data .. "/nvim-java/packages/**",
@@ -143,15 +143,16 @@ function M.should_lock(path)
     return false
   end
   path = normalize(path)
+  local compiler_header = vim.fn.has "win32" == 1
+    and settings.protect_system_paths ~= false
+    and require("config.platform").standard_header_context(path) ~= nil
   return not matches(compiled.exclude, path)
-    and (matches(compiled.include, path) or matches_runtime_path(path))
+    and (matches(compiled.include, path) or matches_runtime_path(path) or compiler_header)
 end
 
 function M.apply(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  if not vim.api.nvim_buf_is_valid(bufnr)
-      or vim.bo[bufnr].buftype ~= ""
-      or vim.b[bufnr].readonly_unlocked then
+  if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].buftype ~= "" or vim.b[bufnr].readonly_unlocked then
     return
   end
 
@@ -251,12 +252,16 @@ function M.setup()
   vim.api.nvim_create_user_command("ReadonlyInfo", function()
     local bufnr = vim.api.nvim_get_current_buf()
     local path = vim.api.nvim_buf_get_name(bufnr)
-    vim.notify(("Path: %s\nConfigured match: %s\nManaged lock: %s\nUnlocked: %s"):format(
-      path,
-      M.should_lock(path),
-      vim.b[bufnr].readonly_managed == true,
-      vim.b[bufnr].readonly_unlocked == true
-    ), vim.log.levels.INFO, { title = "Read-only" })
+    vim.notify(
+      ("Path: %s\nConfigured match: %s\nManaged lock: %s\nUnlocked: %s"):format(
+        path,
+        M.should_lock(path),
+        vim.b[bufnr].readonly_managed == true,
+        vim.b[bufnr].readonly_unlocked == true
+      ),
+      vim.log.levels.INFO,
+      { title = "Read-only" }
+    )
   end, { desc = "Show read-only status for the current buffer" })
 
   vim.api.nvim_create_user_command("SettingsReload", M.reload, {

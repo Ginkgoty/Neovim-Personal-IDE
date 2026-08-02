@@ -14,5 +14,6 @@ vim.filetype.add({
   pattern = {
     [".*%.c%.doxygen"] = "c.doxygen",
     [".*%.cpp%.doxygen"] = "cpp.doxygen",
+    [".*/%.vscode/tasks%.json"] = "jsonc",
   },
 })

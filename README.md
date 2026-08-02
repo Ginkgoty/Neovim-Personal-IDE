@@ -1,7 +1,7 @@
 # Neovim Personal IDE
 
 A modern, cross-platform Neovim configuration for C/C++, C#/.NET, Python,
-Go, Rust, Java, SQL, and Lua.
+Go, Rust, Java, JavaScript/TypeScript, SQL, JSON, and Lua.
 
 ## Requirements
 
@@ -43,16 +43,18 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 
 ## Main features
 
-- LSP and completion for C/C++, C#/.NET, Python, Go, Rust, Java, SQL, and Lua
+- LSP and completion for C/C++, C#/.NET, Python, Go, Rust, Java,
+  JavaScript/TypeScript, SQL, JSON, and Lua
 - GitHub Copilot inline suggestions (accept with `Ctrl-J`) plus a
   CodeCompanion chat sidebar (`<leader>ac`); sign in once with
   `:Copilot auth` and both pick it up. Chats are auto-saved and can be
   browsed and restored with `<leader>ah`
 - Ruff and ty for modern Python projects, with per-workspace interpreter
   discovery, selection, caching, terminal activation, and DAP synchronization
-- DAP debugging with CodeLLDB, GDB, NetCoreDbg, debugpy, Delve, and Java Debug
+- DAP debugging with CodeLLDB, GDB, NetCoreDbg, debugpy, Delve, Java Debug,
+  and the VS Code JavaScript debugger
 - Formatting through Conform: Ruff, clang-format, CSharpier,
-  goimports/gofmt, rustfmt, and StyLua
+  goimports/gofmt, rustfmt, Prettier, and StyLua
 - Telescope search, grug-far project search/replace, nvim-tree,
   Neogit/Diffview, Gitsigns, WhichKey, and ToggleTerm
 - Overseer task management for build, run, test, and project task output
@@ -69,6 +71,8 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 ```vim
 :Lazy sync          " Install/update plugins
 :Mason              " Manage LSP/DAP/formatter tools
+:MasonUpdate        " Refresh the Mason registry (does not upgrade tools)
+:MasonUpgrade       " Refresh registry and upgrade every installed Mason tool
 :TSUpdate           " Update Treesitter parsers
 :checkhealth        " Diagnose the installation
 :ConformInfo        " Show the formatter for the current buffer
@@ -104,6 +108,12 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :CodeCompanionHistory " Browse saved chat sessions
 :CodeCompanionSummaries " Browse generated chat summaries
 ```
+
+`Lazy sync` updates Neovim plugins, not Mason packages. Mason 2.3 refreshes a
+stale registry automatically after its 24-hour cache expires, while
+`MasonUpdate` forces only the registry metadata to refresh. Use
+`MasonUpgrade` for the complete operation: it refreshes the registry, compares
+every installed package with the new index, and upgrades all outdated tools.
 
 Press `<Space>` and pause briefly to discover configured shortcuts with which-key.
 Press `<Space>,` to edit the centralized `lua/config/settings.lua` file.
@@ -220,7 +230,7 @@ These mappings are available when an LSP client is attached:
 | Key | Action |
 | --- | --- |
 | `gd` / `gD` | Go to definition/declaration |
-| `<leader><Enter>` | On a definition: find references; otherwise go to definition (falls back to declaration) |
+| `<leader><Enter>` | Follow an include; uses go to definitions, definitions (including macros) list references |
 | `grr` / `gri` / `grt` | Find references/implementations/type definition |
 | `gai` / `gao` | Incoming/outgoing calls |
 | `K` | Hover documentation and inferred type information |
@@ -297,6 +307,40 @@ insertion, and a platform-restricted compiler query-driver. Accurate project
 diagnostics still depend on `compile_commands.json`, `compile_flags.txt`, or a
 project `.clangd` file. Neovim warns once per project when no compilation
 database is found; it does not guess a C++ standard, macro set, or include path.
+clangd itself remains PATH/Mason-managed. For a detected Clang toolchain, its
+builtin resource directory is queried from the compiler rather than hard-coded;
+safe host compiler aliases are allow-listed through `--query-driver` so target
+and implicit system include paths follow the driver named by the compilation
+database. Non-Clang toolchains retain clangd's own builtin headers.
+Include paths that clangd resolves through LSP document links are underlined;
+place the cursor on one and press `<leader><Enter>` or `gx` to open it inside
+Neovim. The buffer-local `gx` deliberately replaces Neovim's external
+application handler for LSP-enabled buffers. Macro names are underlined only
+when clangd resolves them to a source `#define` with a non-empty replacement
+body: the same leader action jumps from a use to its definition, or lists
+references from the definition. Empty feature flags, compiler builtins, and
+command-line `-D` macros remain unadorned. Configure this with
+`lsp.document_links.underline_macros`.
+Protected SDK, toolchain, and package headers never start an independent
+unconstrained clangd: when reached from project code through an include, symbol,
+declaration, or macro jump, they inherit that tab's originating project clangd
+and translation-unit context. When opened directly without project context,
+headers inside the selected compiler's dynamically queried include paths use a
+controlled standalone clangd. C++-only standard-library roots use C++; shared
+system `.h` roots use ISO C, avoiding an invented Objective-C++ context. On
+macOS, trusted versioned GCC/G++ drivers found on PATH are also queried without
+displacing Apple Clang as the default; directly opened GCC/libstdc++ headers
+receive a generated cache-local compilation database whose command names their
+owning GCC driver. clangd then uses QueryDriver for the GCC target and include
+search paths; clangd's parser itself necessarily remains Clang-based.
+On Windows, the same standalone mechanism dynamically discovers MinGW include
+roots through GCC/G++, or builds an MSVC-style command from the `cl.exe`
+toolset selected by `vswhere` plus the newest installed Windows SDK (UCRT,
+shared, UM, WinRT, and C++/WinRT roots). MSVC and MinGW locations and versions
+are not hard-coded; MSVC remains preferred when both toolchains are installed.
+The leader key remains the unified smart-navigation entry for links and
+symbols. Configure link rendering under `lsp.document_links` in
+`lua/config/settings.lua`.
 
 ### Python environments
 
@@ -343,7 +387,7 @@ locking editable source trees outside the environment.
 | `<leader>gg` | Open the Neogit status split |
 | `<leader>gh` / `<leader>gH` | Current-file/repository history in Diffview |
 | `<leader>gq` | Close the Diffview history/diff view |
-| `<leader>rr` | Select and run an Overseer task |
+| `<leader>rr` | Fuzzy-search and run a project task (`Ctrl-A` adds temporary Make arguments; cancel returns to the picker) |
 | `<leader>rt` | Toggle the bottom task list |
 | `<leader>rl` / `<leader>ro` | Restart/open output for the latest task |
 | `<leader>rs` / `<leader>ra` | Stop the latest running task/select a task action |
@@ -375,6 +419,29 @@ for an ad-hoc command. For reproducible cross-device builds, keep the build,
 run, and test commands in a project task file instead of hard-coding them in
 this Neovim configuration.
 
+Out-of-source Make builds are also discovered from the project-root directories
+listed in `settings.tasks.build_directories`. This covers workflows such as
+running `../configure` inside `build/`, where the source root has no Makefile.
+When `settings.tasks.make.use_bear` is enabled (the default), Overseer wraps
+Make build targets with Bear so compiler invocations update the build
+directory's `compile_commands.json`; an existing database is appended to, and
+clean targets bypass Bear. Bear is a system build tool rather than a Mason
+package. Install it through the host package manager; unavailable Bear falls
+back to ordinary Make with a warning and the official installation URL.
+
+JSON and JSONC files use jsonls with SchemaStore completion and validation.
+For `.vscode/tasks.json`, `<leader>rc` opens the existing file or creates a
+build, run, CMake build-and-run, or empty template. jsonls and SchemaStore
+supply VS Code task completion, documentation, and validation; `<leader>rr`
+then discovers and runs the saved tasks.
+
+The VS Code tasks Schema is pinned locally at `schemas/vscode-tasks.json`, so
+task completion works offline and remains identical across devices. Its
+authoritative source is `https://www.schemastore.org/task.json`; update it only
+when desired with `:VSCodeTasksSchemaUpdate`, restart Neovim, and review the
+resulting Git diff. SchemaStore.nvim continues to provide schemas for other
+JSON files.
+
 ### Global settings and protected files
 
 Edit `lua/config/settings.lua` to change user-facing global behavior. Its
@@ -386,6 +453,8 @@ buffer-word noise; `diagnostics` controls live diagnostic presentation;
 WhichKey delay; `python.environment` controls interpreter restoration and its
 picker; `plugins.check_for_updates` controls Lazy's background update check;
 `ui.codecompanion.chat_width` controls the right-side AI chat width; and
+`lsp.workspace_file_watching` controls Neovim-side recursive workspace
+watching (disabled by default to protect large projects), while
 `lsp.documentation` controls the automatic symbol context window, including
 documentation, line diagnostics, and Quick Fix detection. Plugin startup
 options take effect after restarting Neovim;
@@ -444,11 +513,13 @@ uv.nvim will use it from PATH. Language SDK tools such as `dotnet`, `gofmt`,
 and `rustfmt` also remain owned by their host toolchains.
 Syntax highlighting remains available when an enabled language toolchain is
 missing, but its LSP, formatter, debugger, and Mason tools wait for the host
-prerequisite: a C/C++ compiler, `dotnet`, `go`, `rustc` + `cargo`, or a JDK.
+prerequisite: a C/C++ compiler, `dotnet`, `go`, `rustc` + `cargo`, a JDK,
+or Node.js with npm. JavaScript and TypeScript share the `javascript` profile.
 Install the toolchain, restart Neovim, and the integrations become active.
 Neovim displays one startup warning per session for enabled languages whose
 toolchains are missing. The warning includes the official installation URL;
-`:LanguageInstall cpp|csharp|go|rust|java` opens the same page on demand.
+`:LanguageInstall cpp|csharp|go|rust|java|javascript` opens the same page on
+demand.
 
 ## Updating
 
