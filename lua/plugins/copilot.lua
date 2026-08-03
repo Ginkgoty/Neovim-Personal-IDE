@@ -99,11 +99,13 @@ return {
         chat = {
           window = {
             position = "right",
-            width = function()
+            -- codecompanion's shared ui.lua compares the raw window.width
+            -- against 0, so a function value errors; resolve the setting now.
+            width = (function()
               local ui = require("config.settings").ui or {}
               local settings = ui.codecompanion or {}
               return tonumber(settings.chat_width) or 0.36
-            end,
+            end)(),
             -- Keep the chat out of the bufferline tab bar.
             buflisted = false,
             opts = {
