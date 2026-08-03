@@ -10,6 +10,9 @@ return {
       return {
         image = {
           enabled = images.enabled ~= false,
+          resolve = function(_, source)
+            return require("config.symbol_documentation").resolve_hover_image(source)
+          end,
           math = {
             enabled = false,
           },

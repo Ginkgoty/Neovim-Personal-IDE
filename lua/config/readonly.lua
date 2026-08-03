@@ -216,6 +216,10 @@ function M.reload()
   if diagnostics then
     diagnostics.setup()
   end
+  local ui_highlights = package.loaded["config.ui_highlights"]
+  if ui_highlights then
+    ui_highlights.refresh()
+  end
   load_settings()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then

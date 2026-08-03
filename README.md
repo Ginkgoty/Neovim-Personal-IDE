@@ -1,7 +1,7 @@
 # Neovim Personal IDE
 
 A modern, cross-platform Neovim configuration for C/C++, C#/.NET, Python,
-Go, Rust, Java, JavaScript/TypeScript, SQL, JSON, and Lua.
+Go, Rust, Java, JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 ## Main features
 
 - LSP and completion for C/C++, C#/.NET, Python, Go, Rust, Java,
-  JavaScript/TypeScript, SQL, JSON, and Lua
+  JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua
 - GitHub Copilot inline suggestions (accept with `Ctrl-J`) plus a
   CodeCompanion chat sidebar (`<leader>ac`); sign in once with
   `:Copilot auth` and both pick it up. Chats are auto-saved and can be
@@ -247,6 +247,40 @@ These mappings are available when an LSP client is attached:
 | `<leader>xi` | Show clangd status in a C/C++ buffer |
 | `<leader>uh` | Toggle inlay hints |
 | `<leader>um` | Toggle rendered/raw Markdown view |
+
+When an attached language server implements `textDocument/documentColor`,
+hovering a reported color with `K` (or waiting for automatic documentation)
+adds an exact swatch plus Hex and RGB/RGBA values to the context window. The
+result is cached until the buffer changes and can be disabled with
+`lsp.documentation.color_preview` in `lua/config/settings.lua`.
+The source buffer uses nvim-highlight-colors to place one colored `■` before
+Hex/RGB/HSL literals—including Vue/HTML attributes that LSP providers often
+omit—and Tailwind palette classes without painting over the literal itself.
+Neovim's native document-color decoration is disabled to prevent duplicate
+swatches. Configure or disable the
+single provider with `lsp.document_colors`; its `tailwind` option controls
+Tailwind palette recognition.
+Markdown images returned by an LSP are rendered through snacks.image;
+base64-embedded PNG, JPEG, GIF, WebP, and SVG images are materialized in a
+size-limited, session-local Neovim cache first. It is removed on normal exit;
+crash leftovers expire after 24 hours. Inside a focused hover window, move onto an
+HTTP(S) Markdown link and press `Enter` or `gx` to open it externally. These
+behaviors are controlled by `lsp.documentation.render_images` and
+`max_data_image_bytes`, `max_data_image_cache_bytes`, and
+`stale_image_cache_hours` in the same settings section.
+Hover rendering is offline-safe by default: HTTP(S) images are not downloaded
+implicitly and appear as ordinary openable links instead. Set
+`lsp.documentation.render_remote_images = true` only when automatic remote
+image fetching is explicitly desired. Embedded data images and local images
+never require network access.
+`file://` links use the same keys but open inside the existing Neovim editor
+window. The hover title advertises `<CR> Open Link` only when the rendered
+content contains a supported link. Image dimensions preserve the source's
+intrinsic pixel size and are converted to terminal cells without upscaling;
+`ui.images.max_width` and `max_height` are proportional shrink-only caps.
+An inline badge followed by an emphasized status (such as MDN Baseline) stays
+on one visual row; the badge source is concealed and the status is rendered as
+plain text so terminals do not substitute an underline for italic text.
 
 ### Project-wide search and replace
 
@@ -527,7 +561,14 @@ and `rustfmt` also remain owned by their host toolchains.
 Syntax highlighting remains available when an enabled language toolchain is
 missing, but its LSP, formatter, debugger, and Mason tools wait for the host
 prerequisite: a C/C++ compiler, `dotnet`, `go`, `rustc` + `cargo`, a JDK,
-or Node.js with npm. JavaScript and TypeScript share the `javascript` profile.
+or Node.js with npm. JavaScript, TypeScript, React, and Vue share the
+`javascript` profile. React JSX/TSX uses vtsls, ESLint, Treesitter, Prettier,
+and the JavaScript debug adapter. Vue 3 additionally uses vue-language-server;
+its HTML/CSS sections are handled by `vue_ls`, while its JavaScript/TypeScript
+sections are delegated to vtsls through the matching bundled Vue plugin.
+Tailwind projects additionally use tailwindcss-language-server for class-name
+completion and project-aware color metadata; Blink renders that metadata as a
+single colored completion icon.
 Install the toolchain, restart Neovim, and the integrations become active.
 Neovim displays one startup warning per session for enabled languages whose
 toolchains are missing. The warning includes the official installation URL;

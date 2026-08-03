@@ -53,7 +53,7 @@ M.display_names = {
   go = "Go",
   rust = "Rust",
   java = "Java",
-  javascript = "JavaScript/TypeScript",
+  javascript = "JavaScript/TypeScript/React/Vue",
 }
 
 local cpp_install_url = platform.is_windows and "https://visualstudio.microsoft.com/downloads/"
@@ -145,15 +145,16 @@ M.definitions = {
     treesitter = { "json" },
   },
   javascript = {
-    lsp = { "ts_ls", "eslint" },
+    lsp = { "vtsls", "vue_ls", "eslint", "tailwindcss" },
     mason_tools = { "prettier", "js-debug-adapter" },
     formatters = {
       javascript = { "prettier" },
       javascriptreact = { "prettier" },
       typescript = { "prettier" },
       typescriptreact = { "prettier" },
+      vue = { "prettier" },
     },
-    treesitter = { "javascript", "typescript", "tsx", "jsdoc" },
+    treesitter = { "javascript", "typescript", "tsx", "jsdoc", "vue", "html", "css" },
   },
   csharp = {
     lsp = { "csharp_ls" },

@@ -109,6 +109,51 @@ return {
         })
       end
 
+      if languages.enabled "javascript" and languages.available "javascript" then
+        -- Vue 3 delegates the TypeScript portions of SFCs to vtsls. Use the
+        -- plugin bundled with vue-language-server so both sides always have
+        -- exactly the same version, including on Windows.
+        local vue_language_server_path = require("config.platform").join(
+          vim.fn.stdpath "data",
+          "mason",
+          "packages",
+          "vue-language-server",
+          "node_modules",
+          "@vue",
+          "language-server"
+        )
+        vim.lsp.config("vtsls", {
+          settings = {
+            vtsls = {
+              tsserver = {
+                globalPlugins = {
+                  {
+                    name = "@vue/typescript-plugin",
+                    location = vue_language_server_path,
+                    languages = { "vue" },
+                    configNamespace = "typescript",
+                  },
+                },
+              },
+            },
+          },
+          filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
+        })
+        vim.lsp.config("tailwindcss", {
+          -- The upstream config advertises dynamic recursive file watching.
+          -- Keep the global large-workspace policy intact: the Tailwind
+          -- server discovers its CSS/config graph itself, while Neovim must
+          -- not watch every node_modules/build directory on its behalf.
+          capabilities = {
+            workspace = {
+              didChangeWatchedFiles = {
+                dynamicRegistration = false,
+              },
+            },
+          },
+        })
+      end
+
       if languages.enabled "csharp" then
         vim.lsp.config("csharp_ls", {
           settings = {

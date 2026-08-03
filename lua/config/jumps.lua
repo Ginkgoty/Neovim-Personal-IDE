@@ -22,6 +22,21 @@ local function execute_jump(key, count)
   vim.api.nvim_feedkeys(tostring(count) .. vim.keycode(key), "nx", false)
 end
 
+function M.mark()
+  -- LSP clients and pickers vary in whether they push their source position.
+  -- Record it before dispatch so same-buffer Vue component/tag jumps are as
+  -- reversible as cross-file jumps. Duplicate marks are skipped by navigate.
+  vim.cmd([[normal! m']])
+end
+
+local function is_current_location(entry)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  return entry.bufnr == bufnr
+    and entry.lnum == cursor[1]
+    and (entry.col or 0) == cursor[2]
+end
+
 function M.navigate(direction)
   local opts = settings()
   local key = direction == "back" and "<C-o>" or "<C-i>"
@@ -33,7 +48,9 @@ function M.navigate(direction)
   if direction == "back" then
     for target = index, 1, -1 do
       local path = entry_path(entries[target])
-      if path and (opts.project_only == false or project.contains(root, path)) then
+      if path
+          and not is_current_location(entries[target])
+          and (opts.project_only == false or project.contains(root, path)) then
         execute_jump(key, index - target + 1)
         return
       end
@@ -41,7 +58,9 @@ function M.navigate(direction)
   else
     for target = index + 2, #entries do
       local path = entry_path(entries[target])
-      if path and (opts.project_only == false or project.contains(root, path)) then
+      if path
+          and not is_current_location(entries[target])
+          and (opts.project_only == false or project.contains(root, path)) then
         execute_jump(key, target - index - 1)
         return
       end

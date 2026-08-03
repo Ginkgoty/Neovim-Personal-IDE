@@ -95,15 +95,46 @@ local function refresh_inlay_hints()
   vim.api.nvim_set_hl(0, "LspInlayHint", inlay)
 end
 
-function M.setup()
+local function configure_document_colors()
+  local lsp = require("config.settings").lsp or {}
+  local options = lsp.document_colors or {}
+  -- nvim-highlight-colors is the single source-buffer provider because many
+  -- LSPs omit colors in Vue/HTML attributes. Keep Neovim's native decoration
+  -- disabled to prevent the duplicate swatches seen when two providers run.
+  vim.lsp.document_color.enable(false)
+  local provider = package.loaded["nvim-highlight-colors"]
+  if provider then
+    if options.enabled == false then
+      provider.turnOff()
+    else
+      -- setup() updates the already-loaded provider and refreshes buffers, so
+      -- :SettingsReload also applies a changed swatch without a restart.
+      provider.setup({
+        render = "virtual",
+        virtual_symbol = options.swatch or "■",
+        virtual_symbol_prefix = "",
+        virtual_symbol_suffix = " ",
+        virtual_symbol_position = "inline",
+        enable_tailwind = options.tailwind == true,
+      })
+    end
+  end
+end
+
+function M.refresh()
   refresh_inlay_hints()
+  configure_document_colors()
+end
+
+function M.setup()
+  M.refresh()
   require("config.macro_links").setup()
   vim.api.nvim_create_autocmd("ColorScheme", {
     group = vim.api.nvim_create_augroup("ReadableLspHighlights", { clear = true }),
     desc = "Keep LSP inlay hints readable with the active colorscheme",
     callback = function()
       vim.schedule(function()
-        refresh_inlay_hints()
+        M.refresh()
         vim.api.nvim_set_hl(0, "LspMacroLink", { underline = true })
       end)
     end,

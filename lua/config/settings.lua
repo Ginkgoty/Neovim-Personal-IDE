@@ -82,6 +82,9 @@ return {
       enabled = true,
       inline = true,
       float = true,
+      -- These are shrink-only bounds in terminal cells. snacks.image keeps an
+      -- image's intrinsic pixel size when it already fits, so an 18x10 SVG
+      -- remains a one-line icon while large screenshots scale proportionally.
       max_width = 80,
       max_height = 40,
     },
@@ -174,6 +177,17 @@ return {
     -- files internally; open-buffer diagnostics and navigation are unaffected.
     workspace_file_watching = false,
 
+    document_colors = {
+      enabled = true,
+      -- One VSCode-style swatch before Hex/RGB/HSL colors, including values in
+      -- Vue/HTML attributes that language servers often omit.
+      swatch = "■",
+      -- Also recognize the built-in Tailwind palette (for example
+      -- bg-blue-500). An attached tailwindcss LSP remains authoritative when
+      -- a project defines a custom palette.
+      tailwind = true,
+    },
+
     document_links = {
       -- Underline only include paths that clangd resolved to a real target.
       -- Buffer-local gx opens the target inside Neovim rather than delegating
@@ -197,6 +211,26 @@ return {
       include_diagnostics = true,
       -- Ask LSP servers for Quick Fix actions and advertise <leader>xq when found.
       detect_quick_fixes = true,
+      -- "auto" follows LC_ALL/LC_MESSAGES/LANG. A BCP-47-style value such as
+      -- "en", "zh-cn", or "ja" selects that link from LSP i18n navigation.
+      language = "auto",
+      -- Replace long rows made entirely of locale links with one preferred
+      -- documentation link. Ordinary Markdown links are never collapsed.
+      collapse_i18n_links = true,
+      -- Show an exact swatch plus Hex/RGB values when an attached LSP reports
+      -- a color under the cursor through textDocument/documentColor.
+      color_preview = true,
+      -- Render Markdown images returned by LSP hover providers. Embedded data
+      -- images are decoded into the Neovim cache with a conservative limit.
+      render_images = true,
+      -- Offline-safe by default: remote Markdown images become clickable
+      -- links instead of triggering an implicit network download.
+      render_remote_images = false,
+      max_data_image_bytes = 2 * 1024 * 1024,
+      -- A session cannot materialize more than this amount in total. Normal
+      -- exit removes its directory; crash leftovers expire on a later start.
+      max_data_image_cache_bytes = 16 * 1024 * 1024,
+      stale_image_cache_hours = 24,
     },
   },
 }

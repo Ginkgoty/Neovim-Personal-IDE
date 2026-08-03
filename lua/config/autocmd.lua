@@ -29,11 +29,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
       })
     end
 
-    map("gd", telescope.lsp_definitions, "Code: go to definition")
-    map("gD", vim.lsp.buf.declaration, "Code: go to declaration")
+    local function reversible(action)
+      return function()
+        require("config.jumps").mark()
+        action()
+      end
+    end
+
+    map("gd", reversible(telescope.lsp_definitions), "Code: go to definition")
+    map("gD", reversible(vim.lsp.buf.declaration), "Code: go to declaration")
     map("grr", telescope.lsp_references, "Code: find references")
-    map("gri", telescope.lsp_implementations, "Code: find implementations")
-    map("grt", telescope.lsp_type_definitions, "Code: go to type definition")
+    map("gri", reversible(telescope.lsp_implementations), "Code: find implementations")
+    map("grt", reversible(telescope.lsp_type_definitions), "Code: go to type definition")
     map("gai", telescope.lsp_incoming_calls, "Code: incoming calls")
     map("gao", telescope.lsp_outgoing_calls, "Code: outgoing calls")
     local symbol_documentation = require "config.symbol_documentation"
@@ -70,6 +77,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local on_definition, found_definition = false, false
 
         local function finish()
+          require("config.jumps").mark()
           if on_definition then
             telescope.lsp_references()
           elseif found_definition then

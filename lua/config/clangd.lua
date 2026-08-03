@@ -19,6 +19,35 @@ local function readable(path)
   return vim.fn.filereadable(path) == 1
 end
 
+local function compilation_language(entry, driver, arguments)
+  for index, argument in ipairs(arguments) do
+    if argument == "-x" then
+      local language = arguments[index + 1]
+      if type(language) == "string" then
+        return language:find "c++" and "cpp" or language:match "^c" and "c" or nil
+      end
+    elseif type(argument) == "string" then
+      local language = argument:match "^%-x(.+)$"
+      if language then
+        return language:find "c++" and "cpp" or language:match "^c" and "c" or nil
+      end
+    end
+  end
+
+  local extension = type(entry.file) == "string" and entry.file:match "%.([^./\\]+)$" or nil
+  if extension then
+    extension = extension:lower()
+    if vim.tbl_contains({ "cc", "cp", "cpp", "cxx", "c++", "cppm", "ixx" }, extension) then
+      return "cpp"
+    elseif extension == "c" then
+      return "c"
+    end
+  end
+
+  local basename = vim.fs.basename(driver):lower():gsub("%.exe$", "")
+  return (basename:match "^g%+%+[%d%.%-]*$" or basename == "c++") and "cpp" or "c"
+end
+
 function M.root_dir(bufnr, on_dir)
   local filename = vim.api.nvim_buf_get_name(bufnr)
   -- Protected compiler headers inherit a project client when that project owns
@@ -98,9 +127,13 @@ function M.before_init(params, config)
       if not clang_undef_present then
         arguments[#arguments + 1] = "-U__clang__"
       end
-      local basename = vim.fs.basename(driver):lower():gsub("%.exe$", "")
-      local cxx_driver = basename:match "^g%+%+[%d%.%-]*$" or basename == "c++"
-      local standard = cxx_driver and not standard_present and platform.gcc_default_cpp_standard(driver) or nil
+      local language = compilation_language(entry, driver, arguments)
+      local standard
+      if not standard_present then
+        standard = language == "cpp" and platform.gcc_default_cpp_standard(driver)
+          or language == "c" and platform.gcc_default_c_standard(driver)
+          or nil
+      end
       if standard then
         arguments[#arguments + 1] = "-std=" .. standard
       end

@@ -12,6 +12,7 @@ local java_checked = false
 local clang_resource_dirs = {}
 local compiler_families = {}
 local gcc_versions = {}
+local gcc_c_standards = {}
 local gcc_cpp_standards = {}
 local standard_include_contexts
 local type_support = {}
@@ -302,7 +303,7 @@ function M.standard_header_context(filename)
   if gcc_version then
     fallback_flags[#fallback_flags + 1] = "-fgnuc-version=" .. gcc_version
     fallback_flags[#fallback_flags + 1] = "-U__clang__"
-    local standard = language == "cpp" and M.gcc_default_cpp_standard(driver) or nil
+    local standard = language == "cpp" and M.gcc_default_cpp_standard(driver) or M.gcc_default_c_standard(driver)
     if standard then
       fallback_flags[#fallback_flags + 1] = "-std=" .. standard
     end
@@ -650,6 +651,41 @@ function M.gcc_version(compiler)
   version = version and version:match "^(%d+%.?%d*%.?%d*)" or nil
   gcc_versions[compiler] = version or false
   return gcc_versions[compiler] or nil
+end
+
+function M.gcc_default_c_standard(compiler)
+  if not compiler or M.compiler_family(compiler) ~= "gcc" then
+    return nil
+  end
+  if gcc_c_standards[compiler] ~= nil then
+    return gcc_c_standards[compiler] or nil
+  end
+  local result = vim
+    .system({ compiler, "-dM", "-E", "-x", "c", "-" }, {
+      stdin = "",
+      text = true,
+    })
+    :wait()
+  local output = result.code == 0 and result.stdout or ""
+  local value = tonumber(output:match "#define%s+__STDC_VERSION__%s+(%d+)L?")
+  local revision
+  if value and value >= 202311 then
+    revision = "23"
+  elseif value and value >= 201710 then
+    revision = "17"
+  elseif value and value >= 201112 then
+    revision = "11"
+  elseif value and value >= 199901 then
+    revision = "99"
+  elseif result.code == 0 then
+    -- C90 predates __STDC_VERSION__. A successful preprocessing probe with no
+    -- version macro therefore identifies the oldest standard generation.
+    revision = "90"
+  end
+  local strict = output:match "#define%s+__STRICT_ANSI__%s+1" ~= nil
+  local standard = revision and ((strict and "c" or "gnu") .. revision) or nil
+  gcc_c_standards[compiler] = standard or false
+  return gcc_c_standards[compiler] or nil
 end
 
 function M.gcc_default_cpp_standard(compiler)

@@ -1,5 +1,6 @@
 local editing = require("config.settings").editing or {}
 local completion = editing.completion or {}
+local document_colors = ((require("config.settings").lsp or {}).document_colors or {})
 
 return {
   {
@@ -57,7 +58,14 @@ return {
       sources = {
         default = { "lsp", "path", "snippets", "buffer" },
         providers = {
-          lsp = { score_offset = 100 },
+          lsp = {
+            score_offset = 100,
+            opts = {
+              -- Blink recognizes the exact #RRGGBB documentation returned by
+              -- tailwindcss-language-server and colors this icon accordingly.
+              tailwind_color_icon = document_colors.swatch or "■",
+            },
+          },
           snippets = { score_offset = 20 },
           path = { score_offset = 10 },
           -- Buffer words are useful as a fallback, but should not outrank a
