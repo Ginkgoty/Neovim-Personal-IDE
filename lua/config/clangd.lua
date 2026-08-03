@@ -21,15 +21,20 @@ end
 
 function M.root_dir(bufnr, on_dir)
   local filename = vim.api.nvim_buf_get_name(bufnr)
-  -- Protected compiler headers inherit a project client when one is available.
-  -- Otherwise only headers inside compiler-reported standard include roots get
-  -- a constrained standalone client; arbitrary package paths are not guessed.
+  -- Protected compiler headers inherit a project client when that project owns
+  -- a compilation database to draw translation-unit context from. Otherwise
+  -- only headers inside compiler-reported standard include roots get a
+  -- constrained standalone client; arbitrary package paths are not guessed.
+  -- The standalone client assigns the correct header language, which the bare
+  -- project client cannot: clangd's generic fallback parses .h and
+  -- extensionless headers as Objective-C++.
   if filename == "" then
     return
   end
 
   if require("config.readonly").should_lock(filename) then
-    if require("config.clangd_context").project_client() then
+    local project = require("config.clangd_context").project_client()
+    if project and M.client_compilation_database(project, filename) then
       return
     end
     local context = require("config.platform").standard_header_context(filename)

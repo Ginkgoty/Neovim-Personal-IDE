@@ -324,9 +324,12 @@ command-line `-D` macros remain unadorned. Configure this with
 Protected SDK, toolchain, and package headers never start an independent
 unconstrained clangd: when reached from project code through an include, symbol,
 declaration, or macro jump, they inherit that tab's originating project clangd
-and translation-unit context. When opened directly without project context,
-headers inside the selected compiler's dynamically queried include paths use a
-controlled standalone clangd. C++-only standard-library roots use C++; shared
+and translation-unit context, provided that project has a compilation database.
+Without one there is no translation-unit context to inherit — clangd's generic
+fallback would parse .h and extensionless headers as Objective-C++ — so the
+header uses the controlled standalone clangd instead. When opened directly
+without project context, headers inside the selected compiler's dynamically
+queried include paths use a controlled standalone clangd. C++-only standard-library roots use C++; shared
 system `.h` roots use ISO C, avoiding an invented Objective-C++ context. On
 macOS, trusted versioned GCC/G++ drivers found on PATH are also queried without
 displacing Apple Clang as the default; directly opened GCC/libstdc++ headers

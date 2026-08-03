@@ -34,6 +34,15 @@ local function remember(bufnr)
   end
 end
 
+-- Inheriting the tab's project client only helps a protected header when that
+-- project can actually supply a compilation context. Without a compilation
+-- database there is no translation-unit context to inherit, and clangd parses
+-- the header with its generic fallback, which is Objective-C++ for .h and
+-- extensionless files; the standalone path assigns the real language instead.
+local function project_has_context(client, filename)
+  return client and require("config.clangd").client_compilation_database(client, filename) ~= nil
+end
+
 local function inherit(bufnr)
   local filename = vim.api.nvim_buf_get_name(bufnr)
   if filename == "" or not require("config.readonly").should_lock(filename) then
@@ -44,17 +53,22 @@ local function inherit(bufnr)
     return
   end
 
-  -- Project navigation always wins over the standalone compiler-header
-  -- fallback and retains the originating translation unit's real context.
+  -- Project navigation wins over the standalone compiler-header fallback only
+  -- when the project owns a compilation database, so clangd's command
+  -- inference can retain the originating translation unit's real context.
   local client = M.project_client()
-  if client then
+  if project_has_context(client, filename) then
     vim.lsp.buf_attach_client(bufnr, client.id)
   end
 end
 
 local function prepare_standalone(bufnr)
   local filename = vim.api.nvim_buf_get_name(bufnr)
-  if filename == "" or not require("config.readonly").should_lock(filename) or M.project_client() then
+  if filename == "" or not require("config.readonly").should_lock(filename) then
+    return
+  end
+  -- A clangd client attached by inherit() above already provides context.
+  if next(vim.lsp.get_clients { bufnr = bufnr, name = "clangd" }) then
     return
   end
   local context = require("config.platform").standard_header_context(filename)
