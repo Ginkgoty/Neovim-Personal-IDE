@@ -98,7 +98,14 @@ local function close_active(context)
   providers[name].close(win, context or {})
 end
 
-function M.toggle(name, context)
+-- Close whichever provider currently occupies the shared sidebar slot.
+function M.close(context)
+  close_active(context)
+end
+
+-- Open a provider in the shared slot: a no-op when it already occupies the
+-- slot, otherwise the current occupant is closed and the provider takes over.
+function M.open(name, context)
   local provider = providers[name]
   if not provider then
     vim.notify("Sidebar provider is not available: " .. name, vim.log.levels.WARN)
@@ -107,8 +114,7 @@ function M.toggle(name, context)
 
   local active_name = M.active()
   if active_name == name then
-    close_active({ reason = "toggle", target = name })
-    return false
+    return true
   end
   if active_name then
     close_active({ reason = "switch", target = name })
@@ -119,6 +125,18 @@ function M.toggle(name, context)
   local win = provider.find_window(vim.api.nvim_get_current_tabpage())
   state.name, state.win = name, win
   return true
+end
+
+function M.toggle(name, context)
+  if not providers[name] then
+    vim.notify("Sidebar provider is not available: " .. name, vim.log.levels.WARN)
+    return false
+  end
+  if M.active() == name then
+    close_active({ reason = "toggle", target = name })
+    return false
+  end
+  return M.open(name, context)
 end
 
 -- Reserve the shared left sidebar slot for a provider that creates its own

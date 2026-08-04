@@ -439,9 +439,11 @@ locking editable source trees outside the environment.
 | `<leader>rl` / `<leader>ro` | Restart/open output for the latest task |
 | `<leader>rs` / `<leader>ra` | Stop the latest running task/select a task action |
 
-NvimTree and grug-far share one managed sidebar slot. Repeating a panel's key
-closes it; pressing another panel key replaces the current occupant without
-changing the editor window. Additional sidebar plugins can register the same
+NvimTree, grug-far, and the DAP UI share one managed sidebar slot. Repeating a
+panel's key closes it; pressing another panel key replaces the current occupant
+without changing the editor window — `<leader>e` or `<leader>F` therefore also
+closes the debug layout. Starting a debug session makes the DAP UI take over
+the slot. Additional sidebar plugins can register the same
 `find_window`, `open`, and `close` provider interface in
 `lua/config/sidebar.lua`.
 

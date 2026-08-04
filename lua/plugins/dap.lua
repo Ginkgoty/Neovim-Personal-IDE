@@ -24,8 +24,36 @@ return {
 
       dapui.setup()
 
-      dap.listeners.before.attach.dapui_config = dapui.open
-      dap.listeners.before.launch.dapui_config = dapui.open
+      -- The debug UI joins the shared sidebar slot: opening it closes the
+      -- explorer/search panel, and opening one of those closes the debug UI.
+      local dapui_filetypes = {
+        dapui_scopes = true,
+        dapui_breakpoints = true,
+        dapui_stacks = true,
+        dapui_watches = true,
+        dapui_console = true,
+        ["dap-repl"] = true,
+      }
+      require("config.sidebar").register("debug", {
+        find_window = function(tab)
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+            if dapui_filetypes[vim.bo[vim.api.nvim_win_get_buf(win)].filetype] then
+              return win
+            end
+          end
+        end,
+        open = function()
+          dapui.open()
+        end,
+        close = function()
+          dapui.close()
+        end,
+      })
+
+      dap.listeners.before.attach.dapui_config = function()
+        require("config.sidebar").open("debug")
+      end
+      dap.listeners.before.launch.dapui_config = dap.listeners.before.attach.dapui_config
       dap.listeners.before.event_terminated.dapui_config = dapui.close
       dap.listeners.before.event_exited.dapui_config = dapui.close
 
@@ -190,14 +218,26 @@ return {
       vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Debug: step into" })
       vim.keymap.set("n", "<leader>dO", dap.step_out, { desc = "Debug: step out" })
       vim.keymap.set("n", "<leader>dp", dap.pause, { desc = "Debug: pause" })
-      vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Debug: toggle breakpoint" })
+      -- dap-ui's breakpoints panel only re-renders on debug-adapter traffic.
+      -- Local breakpoint changes emit no such event without an active session,
+      -- so refresh the UI explicitly after changing breakpoints.
+      local function refresh_dapui()
+        dapui.update_render({})
+      end
+      vim.keymap.set("n", "<leader>db", function()
+        dap.toggle_breakpoint()
+        refresh_dapui()
+      end, { desc = "Debug: toggle breakpoint" })
       vim.keymap.set("n", "<leader>dB", function()
         dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+        refresh_dapui()
       end, { desc = "Debug: conditional breakpoint" })
       vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "Debug: run last" })
       vim.keymap.set("n", "<leader>dr", dap.repl.open, { desc = "Debug: open REPL" })
       vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "Debug: terminate" })
-      vim.keymap.set("n", "<leader>du", dapui.toggle, { desc = "Debug: toggle UI" })
+      vim.keymap.set("n", "<leader>du", function()
+        require("config.sidebar").toggle("debug")
+      end, { desc = "Debug: toggle UI" })
       vim.keymap.set({ "n", "v" }, "<leader>de", function()
         dapui.eval()
       end, { desc = "Debug: evaluate expression" })
