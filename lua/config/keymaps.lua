@@ -1,5 +1,7 @@
 -- lua/config/keymaps.lua
 
+local platform = require('config.platform')
+
 vim.g.mapleader = ' '
 
 vim.keymap.set('n', '<leader>,', function()
@@ -142,7 +144,11 @@ vim.keymap.set({ 'n', 'v' }, '<leader>fw', function()
 end, { silent = true, desc = 'Find: word / selection' })
 vim.keymap.set('n', '<leader>fr', '<cmd>Telescope oldfiles<CR>', { silent = true, desc = 'Find: recent files' })
 vim.keymap.set('n', '<leader>fc', '<cmd>Telescope commands<CR>', { silent = true, desc = 'Find: commands' })
-vim.keymap.set('n', '<leader>fm', '<cmd>Telescope man_pages<CR>', { silent = true, desc = 'Find: man pages' })
+-- Windows has no man command or page database, so the picker can never list
+-- anything there; keep the mapping on platforms where man pages exist.
+if not platform.is_windows then
+  vim.keymap.set('n', '<leader>fm', '<cmd>Telescope man_pages<CR>', { silent = true, desc = 'Find: man pages' })
+end
 
 -- Git pickers
 vim.keymap.set('n', '<leader>gf', '<cmd>Telescope git_files<CR>', { silent = true, desc = 'Git: files' })
