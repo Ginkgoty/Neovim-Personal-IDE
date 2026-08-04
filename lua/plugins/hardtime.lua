@@ -18,6 +18,9 @@ return {
                 ["<Left>"] = false,
                 ["<Right>"] = false,
             },
+            -- Disabling the mouse clears 'mouse' globally, which also breaks
+            -- clickable UI such as the nvim-dap-ui debug control buttons.
+            disable_mouse = false,
         },
 
         config = function(_, opts)
