@@ -98,6 +98,12 @@ return {
         })
       end
 
+      if languages.enabled "python" then
+        vim.lsp.config("ruff", {
+          before_init = require("config.python_environment").ruff_before_init,
+        })
+      end
+
       if languages.enabled "json" then
         vim.lsp.config("jsonls", {
           settings = {

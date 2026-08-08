@@ -1,23 +1,33 @@
 return {
   {
-    "zbirenbaum/copilot.lua",
+    "github/copilot.vim",
+    branch = "release",
     cmd = "Copilot",
     event = "InsertEnter",
-    opts = {
-      -- Chat is provided by codecompanion.nvim below.
-      panel = { enabled = false },
-      suggestion = {
-        auto_trigger = true,
-        keymap = {
-          -- Keep Tab for completion selection and snippet jumps. Accept the
-          -- separate Copilot ghost suggestion explicitly with CTRL-J.
-          accept = "<C-J>",
-          next = "<M-]>",
-          prev = "<M-[>",
-          dismiss = "<C-]>",
-        },
-      },
-    },
+    init = function()
+      -- Keep Tab owned by blink/snippets and use Copilot's explicit mapping.
+      vim.g.copilot_no_tab_map = true
+      -- The official plugin normally permits npx to update its language
+      -- server at startup. Use its bundled, tested server instead: plugin
+      -- updates remain an explicit Lazy operation and startup stays offline.
+      vim.g.copilot_version = false
+    end,
+    config = function()
+      vim.keymap.set("i", "<C-J>", 'copilot#Accept("\\<CR>")', {
+        expr = true,
+        replace_keycodes = false,
+        desc = "Copilot: accept suggestion",
+      })
+      vim.keymap.set("i", "<M-]>", "<Plug>(copilot-next)", {
+        desc = "Copilot: next suggestion",
+      })
+      vim.keymap.set("i", "<M-[>", "<Plug>(copilot-previous)", {
+        desc = "Copilot: previous suggestion",
+      })
+      vim.keymap.set("i", "<C-]>", "<Plug>(copilot-dismiss)", {
+        desc = "Copilot: dismiss suggestion",
+      })
+    end,
   },
   {
     "olimorris/codecompanion.nvim",
@@ -40,8 +50,8 @@ return {
       },
     },
     -- The default chat/inline adapter is already "copilot". It reuses the
-    -- OAuth token that :Copilot auth writes to github-copilot/hosts.json,
-    -- and plenary.curl honors the HTTPS_PROXY environment variable.
+    -- credentials that :Copilot setup writes under github-copilot, and
+    -- plenary.curl honors the HTTPS_PROXY environment variable.
     opts = {
       interactions = {
         chat = {

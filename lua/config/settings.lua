@@ -89,6 +89,21 @@ return {
       max_height = 40,
     },
 
+    debug_sidebar = {
+      width = 48,
+      -- Height shared by the DAP REPL and debug console at the bottom.
+      tray_height = 10,
+      -- A collapsed panel uses this single body row for its rendered title.
+      collapsed_height = 1,
+      -- Blank rows between Breakpoints and the global lualine status bar.
+      bottom_gap = 1,
+      -- Expanded sections fit their rendered content up to this viewport cap.
+      -- Excess content remains available by scrolling inside the section.
+      max_expanded_height = 18,
+      -- Use dap-ui element IDs: scopes, watches, stacks, breakpoints.
+      initially_expanded = { "scopes", "watches", "stacks", "breakpoints" },
+    },
+
     search_replace = {
       -- grug-far temporarily replaces NvimTree, like VSCode's Search view.
       sidebar_width = 48,

@@ -21,8 +21,63 @@ return {
       local platform = require("config.platform")
       local dap = require("dap")
       local dapui = require("dapui")
+      local dap_sidebar = require("config.dap_sidebar")
+      local debug_ui = ((require("config.settings").ui or {}).debug_sidebar or {})
 
-      dapui.setup()
+      dapui.setup({
+        -- DAP element buffers are views, not source-code buffers. In
+        -- particular, do not let dap-ui's default `r` mapping send an
+        -- expression from Watch/Variables to the REPL.
+        mappings = {
+          repl = {},
+        },
+        -- Keep dap-ui's native controls in the REPL only. Source-buffer guards
+        -- below prevent them from becoming an accidental session launcher.
+        controls = { enabled = true, element = "repl" },
+        layouts = {
+          {
+            elements = {
+              { id = "breakpoints", size = 0.25 },
+              { id = "stacks", size = 0.25 },
+              { id = "watches", size = 0.25 },
+              { id = "scopes", size = 0.25 },
+            },
+            position = "left",
+            size = math.max(30, math.floor(tonumber(debug_ui.width) or 48)),
+          },
+          {
+            elements = {
+              { id = "repl", size = 0.5 },
+              { id = "console", size = 0.5 },
+            },
+            position = "bottom",
+            size = math.max(4, math.floor(tonumber(debug_ui.tray_height) or 10)),
+          },
+        },
+      })
+      -- dap-ui's Play and Restart buttons normally call dap.continue/run_last
+      -- even without a session. Keep the controls visible, but require users
+      -- to start a new debug task from a source buffer as designed.
+      if _G._dapui then
+        _G._dapui.play = function()
+          local session = dap.session()
+          if not session then
+            vim.notify("Start debugging from a source buffer", vim.log.levels.INFO)
+          elseif session.stopped_thread_id then
+            dap.continue()
+          else
+            dap.pause()
+          end
+        end
+        _G._dapui.run_last = function()
+          if dap.session() then
+            dap.run_last()
+          else
+            vim.notify("Start debugging from a source buffer", vim.log.levels.INFO)
+          end
+        end
+      end
+      dap_sidebar.setup()
 
       -- The debug UI joins the shared sidebar slot: opening it closes the
       -- explorer/search panel, and opening one of those closes the debug UI.
@@ -31,9 +86,11 @@ return {
         dapui_breakpoints = true,
         dapui_stacks = true,
         dapui_watches = true,
-        dapui_console = true,
-        ["dap-repl"] = true,
       }
+      local function close_debug_ui()
+        dap_sidebar.close_gap()
+        dapui.close()
+      end
       require("config.sidebar").register("debug", {
         find_window = function(tab)
           for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
@@ -43,10 +100,11 @@ return {
           end
         end,
         open = function()
-          dapui.open()
+          dapui.open({ reset = true })
+          vim.schedule(dap_sidebar.attach)
         end,
         close = function()
-          dapui.close()
+          close_debug_ui()
         end,
       })
 
@@ -54,8 +112,8 @@ return {
         require("config.sidebar").open("debug")
       end
       dap.listeners.before.launch.dapui_config = dap.listeners.before.attach.dapui_config
-      dap.listeners.before.event_terminated.dapui_config = dapui.close
-      dap.listeners.before.event_exited.dapui_config = dapui.close
+      dap.listeners.before.event_terminated.dapui_config = close_debug_ui
+      dap.listeners.before.event_exited.dapui_config = close_debug_ui
 
       if languages.enabled("python") then
         -- Keep the adapter isolated from project/global Python environments.

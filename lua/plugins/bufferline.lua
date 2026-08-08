@@ -7,6 +7,16 @@ return {
         config = function()
             local title_highlight = "NvimSidebarTitle"
 
+            local function sidebar_offset(filetype, text)
+                return {
+                    filetype = filetype,
+                    text = text,
+                    highlight = title_highlight,
+                    text_align = "center",
+                    separator = true,
+                }
+            end
+
             local function refresh_sidebar_title_highlight()
                 local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
                 local fill = vim.api.nvim_get_hl(0, { name = "BufferLineFill", link = false })
@@ -38,21 +48,12 @@ return {
                         return buf.name
                     end,
                     offsets = {
-                        {
-                            filetype = "NvimTree",
-                            text = "File Explorer",  -- 你可以自定义这里的文本显示
-                            highlight = title_highlight,
-                            text_align = "center",  -- 你可以选择文本对齐方式（"left", "center", "right"）
-                            separator = true  -- 如果想要 separator 分隔符
-                        },
-                        {
-                            -- grug-far temporarily occupies the NvimTree sidebar.
-                            filetype = "grug-far",
-                            text = "Search & Replace",
-                            highlight = title_highlight,
-                            text_align = "center",
-                            separator = true,
-                        },
+                        sidebar_offset("NvimTree", "File Explorer"),
+                        sidebar_offset("grug-far", "Search & Replace"),
+                        -- The DAP sidebar is one column of four stacked
+                        -- windows. Bufferline offsets must target the topmost
+                        -- window of that column; Variables is our fixed anchor.
+                        sidebar_offset("dapui_scopes", "Run & Debug"),
                     },
                 }
             }

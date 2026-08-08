@@ -47,7 +47,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
   JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua
 - GitHub Copilot inline suggestions (accept with `Ctrl-J`) plus a
   CodeCompanion chat sidebar (`<leader>ac`); sign in once with
-  `:Copilot auth` and both pick it up. Chats are auto-saved and can be
+  `:Copilot setup` and both pick it up. Chats are auto-saved and can be
   browsed and restored with `<leader>ah`
 - Ruff and ty for modern Python projects, with per-workspace interpreter
   discovery, selection, caching, terminal activation, and DAP synchronization
@@ -102,7 +102,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :Screenkey toggle    " Toggle the pressed-key overlay
 :checkhealth snacks  " Diagnose terminal image rendering
 :VenvSelect          " Discover and select the current Python interpreter
-:Copilot auth       " Sign in to GitHub Copilot (first use)
+:Copilot setup      " Sign in to GitHub Copilot (first use)
 :Copilot status     " Show Copilot sign-in and service status
 :CodeCompanionChat Toggle " Toggle the Copilot chat sidebar
 :CodeCompanionHistory " Browse saved chat sessions
@@ -409,6 +409,10 @@ The first selection is cached per workspace and restored automatically on
 later visits. Selecting another interpreter updates Neovim's environment,
 restarts Python-specific LSP clients such as ty and Ruff with the new
 environment, updates nvim-dap-python, and affects terminals opened afterwards.
+ty resolves its target version from `requires-python`, then the selected
+environment, then its own default. Ruff preserves `target-version` and
+`requires-python` as higher-priority filesystem settings, uses the selected
+interpreter only as a fallback, and otherwise retains Ruff's default.
 Configure cache restoration, notifications, and the picker backend under
 `python.environment` in `lua/config/settings.lua`. Existing terminals and
 already-running external shells are intentionally not modified.
@@ -446,6 +450,24 @@ closes the debug layout. Starting a debug session makes the DAP UI take over
 the slot. Additional sidebar plugins can register the same
 `find_window`, `open`, and `close` provider interface in
 `lua/config/sidebar.lua`.
+
+The debug sidebar contains four VSCode-style sections in this order:
+Variables, Watch, Call Stack, and Breakpoints. Click a section title to
+collapse or expand it; with focus inside a section, `za`, `zo`, and `zc`
+toggle, expand, and collapse it. A collapsed section displays only its title;
+its former height is immediately redistributed across the expanded sections.
+Expanded sections fit their rendered content up to the configured limit; the
+last expanded section acts as the elastic filler required by Neovim's full-
+height split layout, and overflowing content remains scrollable.
+At least one section remains expanded because Neovim split layouts cannot
+leave unused sidebar rows. Configure its width,
+collapsed height, expanded-content height limit, bottom-tray height, and
+initially expanded sections with
+`ui.debug_sidebar` in `lua/config/settings.lua`. The bottom tray retains the
+control-bearing DAP REPL and labelled Debug Console. DAP panels, REPL, and console are treated as
+tool views rather than source buffers: debug/start/UI shortcuts and Watch's
+default `r`-to-REPL action are disabled there. Use those commands from an
+editor buffer; `<leader>dr` opens or focuses the REPL from code.
 
 Inside the CodeCompanion chat buffer, every chat action uses LocalLeader
 (`\`, buffer-local, so normal buffers are unaffected): `\r` regenerate,
