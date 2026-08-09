@@ -40,6 +40,21 @@ return {
         vim.cmd.colorscheme("xcodelight")
       end, { desc = "Use Xcode Light" })
 
+      vim.api.nvim_create_user_command("ThemeDuotone", function()
+        vim.o.background = "light"
+        vim.cmd.colorscheme("base2tone_morning_light")
+      end, { desc = "Use DuoTone Morning Light" })
+
+      vim.api.nvim_create_user_command("ThemeMdnLike", function()
+        vim.o.background = "light"
+        vim.cmd.colorscheme("mdn-like")
+      end, { desc = "Use MDN-like Light" })
+
+      vim.api.nvim_create_user_command("ThemeSolarized", function()
+        vim.o.background = "light"
+        vim.cmd.colorscheme("solarized")
+      end, { desc = "Use Solarized Light" })
+
       vim.api.nvim_create_user_command("ThemeOxocarbon", function()
         vim.o.background = "dark"
         vim.cmd.colorscheme("oxocarbon")
@@ -68,6 +83,25 @@ return {
     "lunacookies/vim-colors-xcode",
     lazy = false,
     priority = 999,
+  },
+  {
+    "atelierbram/Base2Tone-nvim",
+    name = "base2tone-nvim",
+    lazy = false,
+    priority = 999,
+  },
+  {
+    "maxmx03/solarized.nvim",
+    name = "solarized.nvim",
+    lazy = false,
+    priority = 999,
+    opts = {
+      palette = "solarized",
+      variant = "winter",
+    },
+    config = function(_, opts)
+      require("solarized").setup(opts)
+    end,
   },
   {
     "nyoom-engineering/oxocarbon.nvim",

@@ -63,7 +63,7 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 - Platform-aware C/C++ toolchain, clangd, formatter, and debugger selection
 - Predictable coding input with automatic pairs, language-native indentation,
   semantic completion, signature help, and native snippets
-- GitHub Light by default; PaperColor, Paper, and Xcode are light alternatives,
+- GitHub Light by default; DuoTone, MDN-like, Solarized, PaperColor, Paper, and Xcode are light alternatives,
   while PaperColor Dark, Oxocarbon, and Ayu are dark alternatives
 
 ## Useful commands
@@ -81,6 +81,9 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 :ThemeGithub        " Use GitHub Light
 :ThemePaperColor    " Use PaperColor Light
 :ThemePaperColorDark " Use PaperColor Dark
+:ThemeDuotone       " Use DuoTone Morning Light
+:ThemeMdnLike       " Use MDN-like Light
+:ThemeSolarized     " Use Solarized Light
 :ThemePaper         " Use Paper
 :ThemeXcode         " Use Xcode Light
 :ThemeOxocarbon     " Use Oxocarbon Dark
