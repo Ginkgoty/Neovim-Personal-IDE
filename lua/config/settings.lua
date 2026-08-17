@@ -31,7 +31,7 @@ return {
   tasks = {
     -- Overseer's built-in Make provider only searches upward. Check these
     -- project-root children for out-of-source configure/CMake builds too.
-    build_directories = { "build", "Build", "out", "cmake-build-debug", "cmake-build-release" },
+    build_directories = { "bld", "build", "Build", "out", "cmake-build-debug", "cmake-build-release" },
     make = {
       -- Capture real compiler invocations for clangd. Bear is a host build
       -- tool and must be installed through the OS package manager.
