@@ -1,6 +1,9 @@
+local has_node = vim.fn.executable "node" == 1
+
 return {
   {
     "github/copilot.vim",
+    enabled = has_node,
     branch = "release",
     cmd = "Copilot",
     event = "InsertEnter",
@@ -31,6 +34,7 @@ return {
   },
   {
     "olimorris/codecompanion.nvim",
+    enabled = has_node,
     dependencies = {
       "nvim-lua/plenary.nvim",
       "nvim-treesitter/nvim-treesitter",

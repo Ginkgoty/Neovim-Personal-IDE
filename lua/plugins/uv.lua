@@ -1,9 +1,9 @@
-local languages = require("config.languages")
+local languages = require "config.languages"
 
 return {
   {
     "benomahony/uv.nvim",
-    enabled = languages.enabled("python"),
+    enabled = languages.enabled "python" and languages.available "python",
     ft = { "python" },
     dependencies = { "nvim-telescope/telescope.nvim" },
     opts = {
@@ -24,7 +24,7 @@ return {
       -- icon rules. Its keymaps are registered globally together with this
       -- setup call, so icon-only entries are safe here.
       local python_icon = { cat = "filetype", name = "python" }
-      require("which-key").add({
+      require("which-key").add {
         { "<leader>ps", icon = python_icon, mode = { "n", "v" } },
         { "<leader>pf", icon = python_icon },
         { "<leader>pi", icon = python_icon },
@@ -32,7 +32,7 @@ return {
         { "<leader>pd", icon = python_icon },
         { "<leader>pc", icon = python_icon },
         { "<leader>pC", icon = python_icon },
-      })
+      }
     end,
   },
 }

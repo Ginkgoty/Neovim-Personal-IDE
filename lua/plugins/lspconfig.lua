@@ -1,6 +1,6 @@
 local languages = require "config.languages"
-local lsp_servers = languages.collect "lsp"
-local automatic_servers = lsp_servers
+local automatic_servers = languages.mason_lsp_servers()
+local bootstrap_managed_install = vim.env.NVIM_BOOTSTRAP == "1"
 
 return {
   {
@@ -19,7 +19,7 @@ return {
       "b0o/SchemaStore.nvim",
     },
     opts = {
-      ensure_installed = languages.mason_lsp_servers(),
+      ensure_installed = bootstrap_managed_install and {} or languages.mason_lsp_servers(),
       automatic_enable = automatic_servers,
     },
     config = function(_, opts)
@@ -115,6 +115,13 @@ return {
         })
       end
 
+      if languages.enabled "sql" then
+        vim.lsp.config("sqls", {
+          root_markers = { "config.yml", ".git" },
+          workspace_required = false,
+        })
+      end
+
       if languages.enabled "javascript" and languages.available "javascript" then
         -- Vue 3 delegates the TypeScript portions of SFCs to vtsls. Use the
         -- plugin bundled with vue-language-server so both sides always have
@@ -171,6 +178,11 @@ return {
       end
 
       require("mason-lspconfig").setup(opts)
+      -- mason-lspconfig enables installed servers. Also accept a sqls binary
+      -- already present on PATH without making it a bootstrap dependency.
+      if languages.enabled "sql" and vim.fn.executable "sqls" == 1 then
+        vim.lsp.enable "sqls"
+      end
     end,
   },
 }

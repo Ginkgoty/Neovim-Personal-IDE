@@ -1,16 +1,21 @@
-local languages = require("config.languages")
+local languages = require "config.languages"
+local bootstrap_managed_install = vim.env.NVIM_BOOTSTRAP == "1"
 local dap_dependencies = {
   {
     "rcarriga/nvim-dap-ui",
     dependencies = { "nvim-neotest/nvim-nio" },
   },
 }
-if languages.enabled("python") then dap_dependencies[#dap_dependencies + 1] = "mfussenegger/nvim-dap-python" end
-if languages.enabled("go") then dap_dependencies[#dap_dependencies + 1] = "leoluz/nvim-dap-go" end
+if languages.enabled "python" and languages.available "python" then
+  dap_dependencies[#dap_dependencies + 1] = "mfussenegger/nvim-dap-python"
+end
+if languages.enabled "go" then
+  dap_dependencies[#dap_dependencies + 1] = "leoluz/nvim-dap-go"
+end
 dap_dependencies[#dap_dependencies + 1] = {
   "WhoIsSethDaniel/mason-tool-installer.nvim",
   dependencies = { "mason-org/mason.nvim" },
-  opts = { ensure_installed = languages.mason_tools() },
+  opts = { ensure_installed = bootstrap_managed_install and {} or languages.mason_tools() },
 }
 
 return {
@@ -18,13 +23,13 @@ return {
     "mfussenegger/nvim-dap",
     dependencies = dap_dependencies,
     config = function()
-      local platform = require("config.platform")
-      local dap = require("dap")
-      local dapui = require("dapui")
-      local dap_sidebar = require("config.dap_sidebar")
+      local platform = require "config.platform"
+      local dap = require "dap"
+      local dapui = require "dapui"
+      local dap_sidebar = require "config.dap_sidebar"
       local debug_ui = ((require("config.settings").ui or {}).debug_sidebar or {})
 
-      dapui.setup({
+      dapui.setup {
         -- DAP element buffers are views, not source-code buffers. In
         -- particular, do not let dap-ui's default `r` mapping send an
         -- expression from Watch/Variables to the REPL.
@@ -54,7 +59,7 @@ return {
             size = math.max(4, math.floor(tonumber(debug_ui.tray_height) or 10)),
           },
         },
-      })
+      }
       -- dap-ui's Play and Restart buttons normally call dap.continue/run_last
       -- even without a session. Keep the controls visible, but require users
       -- to start a new debug task from a source buffer as designed.
@@ -100,7 +105,7 @@ return {
           end
         end,
         open = function()
-          dapui.open({ reset = true })
+          dapui.open { reset = true }
           vim.schedule(dap_sidebar.attach)
         end,
         close = function()
@@ -109,29 +114,29 @@ return {
       })
 
       dap.listeners.before.attach.dapui_config = function()
-        require("config.sidebar").open("debug")
+        require("config.sidebar").open "debug"
       end
       dap.listeners.before.launch.dapui_config = dap.listeners.before.attach.dapui_config
       dap.listeners.before.event_terminated.dapui_config = close_debug_ui
       dap.listeners.before.event_exited.dapui_config = close_debug_ui
 
-      if languages.enabled("python") then
+      if languages.enabled "python" and languages.available "python" then
         -- Keep the adapter isolated from project/global Python environments.
         require("dap-python").setup(platform.debugpy_python())
       end
-      if languages.enabled("go") and languages.available("go") then
-        require("dap-go").setup({
+      if languages.enabled "go" and languages.available "go" then
+        require("dap-go").setup {
           delve = {
             path = platform.executable(platform.mason_package("delve", "dlv")),
           },
-        })
+        }
       end
 
       dap.adapters.codelldb = {
         type = "server",
         port = "${port}",
         executable = {
-          command = platform.mason_bin("codelldb"),
+          command = platform.mason_bin "codelldb",
           args = { "--port", "${port}" },
         },
       }
@@ -162,8 +167,7 @@ return {
         stopAtBeginningOfMainSubprogram = false,
       }
       local toolchain = platform.c_toolchain()
-      local preferred_debugger = toolchain and toolchain.debugger
-        or (platform.is_macos and "codelldb" or "gdb")
+      local preferred_debugger = toolchain and toolchain.debugger or (platform.is_macos and "codelldb" or "gdb")
       local cpp_configurations
       if preferred_debugger == "codelldb" then
         -- macOS/Apple Clang and Windows/MSVC prefer CodeLLDB. On MSVC this is
@@ -176,20 +180,20 @@ return {
         -- MinGW and Linux use the debugger matching their native toolchain.
         cpp_configurations = { gdb_config, codelldb_config }
       end
-      if languages.enabled("cpp") and languages.available("cpp") then
+      if languages.enabled "cpp" and languages.available "cpp" then
         dap.configurations.c = cpp_configurations
         dap.configurations.cpp = cpp_configurations
       end
-      if languages.enabled("rust") and languages.available("rust") then
+      if languages.enabled "rust" and languages.available "rust" then
         dap.configurations.rust = {
           vim.tbl_extend("force", codelldb_config, { name = "Launch Rust executable" }),
         }
       end
 
-      if languages.enabled("csharp") and languages.available("csharp") then
+      if languages.enabled "csharp" and languages.available "csharp" then
         dap.adapters.coreclr = {
           type = "executable",
-          command = platform.mason_bin("netcoredbg"),
+          command = platform.mason_bin "netcoredbg",
           args = { "--interpreter=vscode" },
         }
         dap.configurations.cs = {
@@ -205,13 +209,13 @@ return {
         }
       end
 
-      if languages.enabled("javascript") and languages.available("javascript") then
+      if languages.enabled "javascript" and languages.available "javascript" then
         dap.adapters["pwa-node"] = {
           type = "server",
           host = "127.0.0.1",
           port = "${port}",
           executable = {
-            command = platform.mason_bin("js-debug-adapter"),
+            command = platform.mason_bin "js-debug-adapter",
             args = { "${port}" },
           },
         }
@@ -252,7 +256,7 @@ return {
         dap.configurations.typescriptreact = { launch_compiled, attach_node }
       end
 
-      if languages.enabled("go") and languages.available("go") then
+      if languages.enabled "go" and languages.available "go" then
         vim.keymap.set("n", "<leader>dg", function()
           require("dap-go").debug_test()
         end, { desc = "Debug Go: nearest test" })
@@ -280,27 +284,27 @@ return {
       -- Local breakpoint changes emit no such event without an active session,
       -- so refresh the UI explicitly after changing breakpoints.
       local function refresh_dapui()
-        dapui.update_render({})
+        dapui.update_render {}
       end
       vim.keymap.set("n", "<leader>db", function()
         dap.toggle_breakpoint()
         refresh_dapui()
       end, { desc = "Debug: toggle breakpoint" })
       vim.keymap.set("n", "<leader>dB", function()
-        dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+        dap.set_breakpoint(vim.fn.input "Breakpoint condition: ")
         refresh_dapui()
       end, { desc = "Debug: conditional breakpoint" })
       vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "Debug: run last" })
       vim.keymap.set("n", "<leader>dr", dap.repl.open, { desc = "Debug: open REPL" })
       vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "Debug: terminate" })
       vim.keymap.set("n", "<leader>du", function()
-        require("config.sidebar").toggle("debug")
+        require("config.sidebar").toggle "debug"
       end, { desc = "Debug: toggle UI" })
       vim.keymap.set({ "n", "v" }, "<leader>de", function()
         dapui.eval()
       end, { desc = "Debug: evaluate expression" })
 
-      if languages.enabled("python") then
+      if languages.enabled "python" and languages.available "python" then
         vim.keymap.set("n", "<leader>dn", function()
           require("dap-python").test_method()
         end, { desc = "Debug Python: nearest test" })

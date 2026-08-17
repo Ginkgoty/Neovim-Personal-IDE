@@ -1,4 +1,4 @@
-local platform = require("config.platform")
+local platform = require "config.platform"
 local M = {}
 
 -- This is the single shared switchboard for language support. A machine may
@@ -18,42 +18,55 @@ M.enabled_languages = {
 }
 
 M.prerequisites = {
+  python = function()
+    return require("config.bootstrap").python_with_venv()
+  end,
   cpp = function()
     return platform.has_c_compiler()
   end,
   csharp = function()
-    return vim.fn.executable("dotnet") == 1
+    return vim.fn.executable "dotnet" == 1
   end,
   go = function()
-    return vim.fn.executable("go") == 1
+    return vim.fn.executable "go" == 1
   end,
   rust = function()
-    return vim.fn.executable("rustc") == 1 and vim.fn.executable("cargo") == 1
+    return vim.fn.executable "rustc" == 1 and vim.fn.executable "cargo" == 1
   end,
   java = function()
     return platform.has_java_21()
   end,
   javascript = function()
-    return vim.fn.executable("node") == 1 and vim.fn.executable("npm") == 1
+    return vim.fn.executable "node" == 1 and vim.fn.executable "npm" == 1
+  end,
+  json = function()
+    -- Mason's json-lsp package is installed from npm even when the broader
+    -- JavaScript language profile is disabled.
+    return vim.fn.executable "node" == 1 and vim.fn.executable "npm" == 1
   end,
 }
 
 M.prerequisite_names = {
+  python = "Python 3 + venv",
   cpp = "C/C++ compiler",
   csharp = ".NET SDK (dotnet)",
   go = "Go SDK (go)",
   rust = "Rust toolchain (rustc + cargo)",
   java = "JDK 21+ (java + javac)",
   javascript = "Node.js toolchain (node + npm)",
+  json = "Node.js toolchain (node + npm)",
 }
 
 M.display_names = {
+  python = "Python",
   cpp = "C/C++",
   csharp = "C#/.NET",
   go = "Go",
   rust = "Rust",
   java = "Java",
   javascript = "JavaScript/TypeScript/React/Vue",
+  json = "JSON",
+  sql = "SQL",
 }
 
 local cpp_install_url = platform.is_windows and "https://visualstudio.microsoft.com/downloads/"
@@ -61,6 +74,10 @@ local cpp_install_url = platform.is_windows and "https://visualstudio.microsoft.
   or "https://clang.llvm.org/get_started.html"
 
 M.install_guides = {
+  python = {
+    message = "Install Python 3 with pip and venv support.",
+    url = "https://www.python.org/downloads/",
+  },
   cpp = {
     message = platform.is_windows and "Install Visual Studio Build Tools with Desktop development with C++."
       or platform.is_macos and "Install Xcode Command Line Tools (xcode-select --install)."
@@ -85,6 +102,10 @@ M.install_guides = {
   },
   javascript = {
     message = "Install the current Node.js LTS release, including npm.",
+    url = "https://nodejs.org/en/download",
+  },
+  json = {
+    message = "Install the current Node.js LTS release, including npm, for json-lsp.",
     url = "https://nodejs.org/en/download",
   },
 }
@@ -206,11 +227,38 @@ function M.collect(field)
 end
 
 function M.mason_tools()
-  return M.collect("mason_tools")
+  return M.collect "mason_tools"
+end
+
+local lsp_to_mason = {
+  lua_ls = "lua-language-server",
+  ruff = "ruff",
+  ty = "ty",
+  clangd = "clangd",
+  gopls = "gopls",
+  rust_analyzer = "rust-analyzer",
+  jsonls = "json-lsp",
+  vtsls = "vtsls",
+  vue_ls = "vue-language-server",
+  eslint = "eslint-lsp",
+  tailwindcss = "tailwindcss-language-server",
+  csharp_ls = "csharp-language-server",
+}
+
+function M.mason_packages()
+  local result, seen = {}, {}
+  for _, server in ipairs(M.mason_lsp_servers()) do
+    append_unique(result, seen, lsp_to_mason[server] or server)
+  end
+  for _, tool in ipairs(M.mason_tools()) do
+    append_unique(result, seen, tool)
+  end
+  table.sort(result)
+  return result
 end
 
 function M.mason_lsp_servers()
-  return M.collect("lsp")
+  return M.collect "lsp"
 end
 
 function M.formatters()

@@ -1,4 +1,4 @@
-local languages = require("config.languages")
+local languages = require "config.languages"
 
 return {
   {
@@ -8,7 +8,7 @@ return {
     build = ":TSUpdate",
 
     config = function()
-      local parsers = languages.collect("treesitter")
+      local parsers = languages.collect "treesitter"
       -- Markdown rendering is an editor-wide UI feature rather than a
       -- language profile, so its parsers are always available.
       vim.list_extend(parsers, { "markdown", "markdown_inline" })
@@ -16,9 +16,11 @@ return {
       for _, parser in ipairs(parsers) do
         enabled_parsers[parser] = true
       end
-      local treesitter = require("nvim-treesitter")
-      treesitter.setup({})
-      treesitter.install(parsers)
+      local treesitter = require "nvim-treesitter"
+      treesitter.setup {}
+      if vim.env.NVIM_BOOTSTRAP ~= "1" then
+        treesitter.install(parsers)
+      end
 
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "*",
@@ -35,6 +37,6 @@ return {
           end
         end,
       })
-    end
-  }
+    end,
+  },
 }

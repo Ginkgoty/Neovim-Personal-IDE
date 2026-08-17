@@ -1,7 +1,7 @@
-local languages = require("config.languages")
+local languages = require "config.languages"
 
 local function environment_info()
-  local selector = require("venv-selector")
+  local selector = require "venv-selector"
   local python = selector.python()
   local environment = selector.venv()
 
@@ -15,7 +15,7 @@ local function environment_info()
   end
 
   local clients = {}
-  for _, client in ipairs(vim.lsp.get_clients({ bufnr = 0 })) do
+  for _, client in ipairs(vim.lsp.get_clients { bufnr = 0 }) do
     if client.name == "ty" or client.name == "ruff" then
       clients[#clients + 1] = client.name
     end
@@ -36,7 +36,7 @@ end
 return {
   {
     "linux-cultist/venv-selector.nvim",
-    enabled = languages.enabled("python"),
+    enabled = languages.enabled "python" and languages.available "python",
     version = false,
     ft = "python",
     dependencies = {
@@ -60,14 +60,14 @@ return {
           require_lsp_activation = true,
           picker = environment.picker or "telescope",
           on_venv_activate_callback = function()
-            local selector = require("venv-selector")
+            local selector = require "venv-selector"
             require("config.readonly").protect_runtime_path(selector.venv())
           end,
         },
       }
     end,
     config = function(_, opts)
-      local selector = require("venv-selector")
+      local selector = require "venv-selector"
       selector.setup(opts)
 
       -- Cached activation can complete through more than one upstream path.

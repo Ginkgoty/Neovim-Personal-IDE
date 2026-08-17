@@ -306,6 +306,10 @@ vim.api.nvim_create_user_command("ClangdInfo", function()
   require("config.clangd").info(0)
 end, { desc = "Show clangd configuration for the current buffer" })
 
+vim.api.nvim_create_user_command("LspInfo", function()
+  vim.cmd "checkhealth vim.lsp"
+end, { desc = "Show Neovim LSP health and client status", force = true })
+
 vim.api.nvim_create_user_command("LanguageInfo", function()
   local languages = require "config.languages"
   local enabled, disabled, unavailable = {}, {}, {}

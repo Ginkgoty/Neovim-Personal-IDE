@@ -5,41 +5,104 @@ Go, Rust, Java, JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua.
 
 ## Requirements
 
-- Neovim 0.12+
-- Git, ripgrep, fd, and a C compiler
-- A Nerd Font for file icons
-- Windows: PowerShell 7 and CMake are recommended. Native builds prefer an
-  installed MSVC C++ toolset (detected with `vswhere.exe`), then MinGW
-  (`gcc`, `g++`, and `mingw32-make`). If neither is usable, Telescope falls
-  back to its built-in sorter.
-- C#/.NET: install the .NET SDK separately and confirm it with
-  `dotnet --list-sdks`. Mason manages the editor-side C# tools, not the SDK.
-- Java requires JDK 21 or newer. Go and Rust require their normal host
-  toolchains (`go`, or `rustc` + `cargo`). Python project management through
-  uv.nvim requires a host-installed `uv` command.
+Dependencies are divided into three levels:
 
-Plugins are managed by [lazy.nvim](https://github.com/folke/lazy.nvim). Language servers, debug adapters, and command-line tools are managed by Mason where possible.
+| Level | Dependencies | Behavior when missing |
+| --- | --- | --- |
+| Required | Neovim 0.12+, Git 2.19+, ripgrep, curl, tar, an archive extractor, Tree-sitter CLI 0.26.1+, and a C/C++ build toolchain | Startup stops before Lazy, Mason, or Tree-sitter loads |
+| Needed | fd/fdfind, Node.js with npm, and Python 3 with venv | The affected integration is disabled or degraded and Neovim shows one warning |
+| Optional | uv, Bear, ImageMagick, a Nerd Font, and language SDKs | Only the corresponding feature is unavailable |
+
+Unix also needs `make`, `unzip`, and `gzip`. Windows needs PowerShell, CMake,
+an MSVC/MinGW compiler, and a 7-Zip-compatible extractor. macOS needs Xcode
+Command Line Tools. The external `fzf` command is not required:
+`telescope-fzf-native.nvim` compiles its own C library. `fd` is optional for
+Telescope but needed by the default Python environment discovery.
+
+The current `nvim-treesitter` main branch requires the external `tree-sitter`
+CLI version 0.26.1 or newer. Install the CLI from the operating-system package
+manager or the official Tree-sitter release, not from npm.
+
+Language SDKs remain explicit host dependencies: C# needs the .NET SDK, Java
+needs JDK 21+, Go needs `go`, Rust needs `rustc` + `cargo`, and JavaScript tools
+need Node.js + npm. Python project commands through uv.nvim need `uv`. Mason
+installs editor-side tools; it does not install these SDKs.
+
+Plugins are managed by [lazy.nvim](https://github.com/folke/lazy.nvim).
+
+Language servers, debug adapters, and command-line tools are managed by Mason where possible.
 
 ## Install
 
-Back up an existing configuration, then clone this repository:
+Back up an existing configuration, clone the repository, and run the bootstrap
+script before starting Neovim. The scripts show a dependency report first and
+ask before invoking a package manager or the portable Linux installer.
+
+Linux and macOS:
 
 ```sh
 git clone https://github.com/Ginkgoty/Neovim-Personal-IDE.git ~/.config/nvim
-nvim
+bash ~/.config/nvim/scripts/bootstrap.sh
 ```
 
-On Windows PowerShell:
+The shell script detects macOS/Homebrew and common Linux families using
+`/etc/os-release`: apt, dnf, pacman, zypper, and apk are supported. If the
+expected Linux package manager is missing or the distribution is unknown, it
+offers an official-binary fallback after showing the plan. The fallback places
+`rg`, `fd`, and `tree-sitter` in `/usr/local/bin`; Neovim's full
+runtime is kept under `/usr/local/lib` with an `/usr/local/bin/nvim` symlink. It currently maps
+x86-64 and ARM64 and refuses to replace an unmanaged Neovim file or symlink.
+
+The portable fallback cannot safely provide Git, curl, tar/unzip/gzip, make, a
+C/C++ compiler, Node.js, or Python across every libc and distribution. Those
+remain explicit system prerequisites, and the post-install check still blocks
+Neovim if a required one is absent. Official Neovim archives require glibc, so
+musl systems receive a compatibility warning instead of an incompatible
+binary. On macOS the script stops when Homebrew or Xcode Command Line Tools is
+missing; it never bootstraps a package manager.
+
+Windows PowerShell:
 
 ```powershell
 git clone https://github.com/Ginkgoty/Neovim-Personal-IDE.git $env:LOCALAPPDATA\nvim
-nvim
+powershell -ExecutionPolicy Bypass -File $env:LOCALAPPDATA\nvim\scripts\bootstrap.ps1
 ```
+
+The PowerShell script uses winget only after confirmation. If winget is absent,
+install Microsoft's App Installer and rerun the script; the script will not
+guess or install a package manager. Visual Studio Build Tools are installed
+with the C++ workload when no usable compiler is detected.
+
+Useful non-interactive modes:
+
+```sh
+bash scripts/bootstrap.sh --check
+bash scripts/bootstrap.sh --install --yes
+bash scripts/bootstrap.sh --install --yes --with-optional
+```
+
+```powershell
+.\scripts\bootstrap.ps1 -Check
+.\scripts\bootstrap.ps1 -Install -Yes
+.\scripts\bootstrap.ps1 -Install -Yes -WithOptional
+```
+
+`--check`/`-Check` never installs anything. `--yes`/`-Yes` is accepted only
+with the explicit install mode. Optional mode installs supported utilities such
+as uv, Bear, and ImageMagick; it does not silently install large language SDKs.
+
+After system checks pass, bootstrap runs plugin installation and then installs
+Mason tools and Tree-sitter parsers in headless Neovim. This keeps the large
+first-time download out of the first interactive editor session. Use
+`--skip-editor` or `-SkipEditorBootstrap` to perform only the host setup.
+
+If a user starts Neovim without bootstrapping, `init.lua` performs the same
+required checks. Missing required dependencies produce a minimal instruction
+buffer and stop all subsequent configuration instead of starting a partial
+Lazy/Mason installation. `:BootstrapInfo` shows the complete dependency report.
 
 The configuration resolves Mason's platform-specific executable layouts
 automatically, including `python.exe`, `dlv.exe`, and `codelldb.exe` on Windows.
-
-On first launch, lazy.nvim installs plugins and Mason installs configured development tools.
 
 ## Main features
 
@@ -69,12 +132,15 @@ On first launch, lazy.nvim installs plugins and Mason installs configured develo
 ## Useful commands
 
 ```vim
+:BootstrapInfo      " Show required, needed, and optional host dependencies
+:BootstrapInstall   " Install configured Mason tools and Tree-sitter parsers
 :Lazy sync          " Install/update plugins
 :Mason              " Manage LSP/DAP/formatter tools
 :MasonUpdate        " Refresh the Mason registry (does not upgrade tools)
 :MasonUpgrade       " Refresh registry and upgrade every installed Mason tool
 :TSUpdate           " Update Treesitter parsers
 :checkhealth        " Diagnose the installation
+:LspInfo            " Run :checkhealth vim.lsp for LSP status
 :ConformInfo        " Show the formatter for the current buffer
 :FormatToggle       " Toggle format-on-save globally
 :FormatToggle!      " Toggle format-on-save for the current buffer
@@ -587,8 +653,8 @@ uv.nvim will use it from PATH. Language SDK tools such as `dotnet`, `gofmt`,
 and `rustfmt` also remain owned by their host toolchains.
 Syntax highlighting remains available when an enabled language toolchain is
 missing, but its LSP, formatter, debugger, and Mason tools wait for the host
-prerequisite: a C/C++ compiler, `dotnet`, `go`, `rustc` + `cargo`, a JDK,
-or Node.js with npm. JavaScript, TypeScript, React, and Vue share the
+prerequisite: Python 3 with venv, a C/C++ compiler, `dotnet`, `go`, `rustc` +
+`cargo`, a JDK, or Node.js with npm. JavaScript, TypeScript, React, and Vue share the
 `javascript` profile. React JSX/TSX uses vtsls, ESLint, Treesitter, Prettier,
 and the JavaScript debug adapter. Vue 3 additionally uses vue-language-server;
 its HTML/CSS sections are handled by `vue_ls`, while its JavaScript/TypeScript
@@ -599,8 +665,8 @@ single colored completion icon.
 Install the toolchain, restart Neovim, and the integrations become active.
 Neovim displays one startup warning per session for enabled languages whose
 toolchains are missing. The warning includes the official installation URL;
-`:LanguageInstall cpp|csharp|go|rust|java|javascript` opens the same page on
-demand.
+`:LanguageInstall python|cpp|csharp|go|rust|java|json|javascript` opens the
+same page on demand.
 
 ## Updating
 
