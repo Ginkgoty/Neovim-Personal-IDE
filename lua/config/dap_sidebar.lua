@@ -30,7 +30,7 @@ local tool_filetypes = {
 local blocked_debug_keys = {
   "<F5>", "<F10>", "<F11>", "<F12>",
   "<leader>dc", "<leader>do", "<leader>di", "<leader>dO", "<leader>dp",
-  "<leader>db", "<leader>dB", "<leader>dl", "<leader>dr", "<leader>dt",
+  "<leader>db", "<leader>dB", "<leader>dl", "<leader>dr", "<leader>dR", "<leader>dt",
   "<leader>du", "<leader>de", "<leader>dg", "<leader>dG", "<leader>dn",
   "<leader>df", "<leader>dj", "<leader>dJ",
 }

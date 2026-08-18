@@ -194,7 +194,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
       end, "UI: toggle inlay hints")
     end
 
-    if client and client:supports_method("textDocument/codeLens", bufnr) then
+    if client and client.name == "rust_analyzer" and client:supports_method("textDocument/codeLens", bufnr) then
+      require("config.rust_codelens").attach(bufnr, client)
+    elseif client and client:supports_method("textDocument/codeLens", bufnr) then
       vim.lsp.codelens.enable(true, { bufnr = bufnr, client_id = client.id })
       map("<leader>ul", function()
         local filter = { bufnr = bufnr }

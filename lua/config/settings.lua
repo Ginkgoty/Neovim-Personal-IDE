@@ -154,6 +154,11 @@ return {
     -- Protect OS SDK/toolchain headers and Neovim-managed tool packages.
     protect_system_paths = true,
     protect_package_paths = true,
+    -- Discover standard-library roots from the active rustc and go commands.
+    -- This is independent of rustup, Scoop, Homebrew, or another installer.
+    protect_language_toolchains = true,
+    -- Protect Cargo registry/Git sources and the Go module cache.
+    protect_dependency_caches = true,
     -- Protect the complete environment selected by venv-selector.nvim.
     protect_python_environments = true,
 

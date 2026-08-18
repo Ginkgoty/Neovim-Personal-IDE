@@ -2,6 +2,8 @@ local M = {}
 
 local compiled = { include = {}, exclude = {} }
 local runtime_paths = {}
+local discovered_roots = {}
+local discovery_requests = {}
 local settings
 
 local function normalize(path)
@@ -67,13 +69,17 @@ local function package_patterns()
   }
 end
 
-local function compile(patterns, kind)
+local function compile(patterns, kind, reason)
   local result = {}
   for _, pattern in ipairs(patterns) do
     local normalized = normalize(pattern)
     local ok, matcher = pcall(vim.glob.to_lpeg, normalized)
     if ok then
-      result[#result + 1] = matcher
+      result[#result + 1] = {
+        matcher = matcher,
+        pattern = normalized,
+        reason = reason,
+      }
     else
       vim.notify(
         ("Invalid readonly %s glob %q: %s"):format(kind, pattern, matcher),
@@ -86,22 +92,37 @@ local function compile(patterns, kind)
 end
 
 local function matches(matchers, path)
-  for _, matcher in ipairs(matchers) do
-    if matcher:match(path) then
-      return true
+  for _, entry in ipairs(matchers) do
+    if entry.matcher:match(path) then
+      return entry
     end
   end
-  return false
+  return nil
 end
 
-local function matches_runtime_path(path)
+local function contains(root, path)
+  return path == root or vim.startswith(path, root .. "/")
+end
+
+local function candidate_paths(path)
+  local logical = normalize(path)
+  local real = canonical(logical)
+  return logical == real and { logical } or { logical, real }
+end
+
+local function matches_runtime_path(paths)
   if settings.protect_python_environments == false then
-    return false
+    return nil
   end
-  local real_path = canonical(path)
+
   for root in pairs(runtime_paths) do
-    if real_path == root or vim.startswith(real_path, root .. "/") then
-      return true
+    for _, path in ipairs(paths) do
+      if contains(root, path) then
+        return {
+          reason = "Python environment",
+          root = root,
+        }
+      end
     end
   end
 
@@ -112,42 +133,99 @@ local function matches_runtime_path(path)
     local root = selector.venv()
     if root and root ~= "" then
       root = canonical(root):gsub("/+$", "")
-      if real_path == root or vim.startswith(real_path, root .. "/") then
-        return true
+      for _, path in ipairs(paths) do
+        if contains(root, path) then
+          return {
+            reason = "Python environment",
+            root = root,
+          }
+        end
       end
     end
   end
-  return false
+  return nil
+end
+
+local function root_enabled(entry)
+  if entry.kind == "language_toolchain" then
+    return settings.protect_language_toolchains ~= false
+  end
+  if entry.kind == "dependency_cache" then
+    return settings.protect_dependency_caches ~= false
+  end
+  return true
+end
+
+local function matches_discovered_root(paths)
+  local best
+  for _, entry in pairs(discovered_roots) do
+    if root_enabled(entry) then
+      for _, path in ipairs(paths) do
+        if
+          (contains(entry.root, path) or contains(entry.real_root, path))
+          and (not best or #entry.root > #best.root)
+        then
+          best = entry
+        end
+      end
+    end
+  end
+  return best
 end
 
 local function load_settings()
   settings = require("config.settings").readonly or {}
-  local include = vim.deepcopy(settings.include or {})
+  compiled.include = compile(settings.include or {}, "include", "Configured include")
   if settings.protect_system_paths ~= false then
-    vim.list_extend(include, system_patterns())
+    vim.list_extend(compiled.include, compile(system_patterns(), "include", "System SDK or toolchain"))
   end
   if settings.protect_package_paths ~= false then
-    vim.list_extend(include, package_patterns())
+    vim.list_extend(compiled.include, compile(package_patterns(), "include", "Neovim-managed package"))
   end
-  if settings.protect_python_environments ~= false then
-    for path in pairs(runtime_paths) do
-      include[#include + 1] = path .. "/**"
-    end
-  end
-  compiled.include = compile(include, "include")
   compiled.exclude = compile(settings.exclude or {}, "exclude")
 end
 
-function M.should_lock(path)
+function M.match(path)
   if not settings or settings.enabled == false or path == "" then
-    return false
+    return nil
   end
-  path = normalize(path)
-  local compiler_header = vim.fn.has "win32" == 1
-    and settings.protect_system_paths ~= false
-    and require("config.platform").standard_header_context(path) ~= nil
-  return not matches(compiled.exclude, path)
-    and (matches(compiled.include, path) or matches_runtime_path(path) or compiler_header)
+
+  local paths = candidate_paths(path)
+  for _, candidate in ipairs(paths) do
+    if matches(compiled.exclude, candidate) then
+      return nil
+    end
+  end
+
+  local root_match = matches_discovered_root(paths) or matches_runtime_path(paths)
+  if root_match then
+    return root_match
+  end
+
+  for _, candidate in ipairs(paths) do
+    local entry = matches(compiled.include, candidate)
+    if entry then
+      return {
+        reason = entry.reason,
+        root = entry.pattern,
+      }
+    end
+  end
+
+  if vim.fn.has "win32" == 1 and settings.protect_system_paths ~= false then
+    local context = require("config.platform").standard_header_context(paths[#paths])
+    if context then
+      return {
+        reason = "System compiler header",
+        root = context.root,
+      }
+    end
+  end
+  return nil
+end
+
+function M.should_lock(path)
+  return M.match(path) ~= nil
 end
 
 function M.apply(bufnr)
@@ -157,7 +235,8 @@ function M.apply(bufnr)
   end
 
   local path = vim.api.nvim_buf_get_name(bufnr)
-  if not M.should_lock(path) then
+  local match = M.match(path)
+  if not match then
     return
   end
 
@@ -166,6 +245,135 @@ function M.apply(bufnr)
     vim.bo[bufnr].modifiable = false
   end
   vim.b[bufnr].readonly_managed = true
+  vim.b[bufnr].readonly_reason = match.reason
+  vim.b[bufnr].readonly_root = match.root
+end
+
+local function refresh_buffers()
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    M.apply(bufnr)
+  end
+  vim.cmd.redrawtabline()
+end
+
+local function register_root(path, kind, reason)
+  if not path or path == "" then
+    return false
+  end
+
+  local root = normalize(path):gsub("/+$", "")
+  local real_root = canonical(root):gsub("/+$", "")
+  local key = table.concat({ kind, root, real_root, reason }, "\0")
+  if discovered_roots[key] then
+    return false
+  end
+
+  discovered_roots[key] = {
+    kind = kind,
+    reason = reason,
+    root = root,
+    real_root = real_root,
+  }
+  return true
+end
+
+local function command_cwd(cwd)
+  cwd = cwd and cwd ~= "" and normalize(cwd) or normalize(vim.fn.getcwd())
+  local stat = vim.uv.fs_stat(cwd)
+  return stat and stat.type == "directory" and cwd or nil
+end
+
+local function discover_command(key, command, cwd, callback)
+  cwd = command_cwd(cwd)
+  key = key .. ":" .. (cwd or "")
+  if discovery_requests[key] then
+    return
+  end
+
+  local executable = vim.fn.exepath(command[1])
+  if executable == "" then
+    discovery_requests[key] = true
+    return
+  end
+
+  discovery_requests[key] = true
+  command = vim.deepcopy(command)
+  command[1] = executable
+  local options = { text = true }
+  if cwd then
+    options.cwd = cwd
+  end
+  vim.system(command, options, function(result)
+    vim.schedule(function()
+      if result.code == 0 then
+        callback(result.stdout or "")
+      end
+    end)
+  end)
+end
+
+local function discover_rust(cwd)
+  local changed = false
+  if settings.protect_dependency_caches ~= false then
+    local cargo_home = vim.env.CARGO_HOME
+    if not cargo_home or cargo_home == "" then
+      cargo_home = (vim.uv.os_homedir() or "") .. "/.cargo"
+    end
+    changed = register_root(cargo_home .. "/registry/src", "dependency_cache", "Cargo registry cache") or changed
+    changed = register_root(cargo_home .. "/git/checkouts", "dependency_cache", "Cargo Git checkout cache") or changed
+  end
+  if changed then
+    refresh_buffers()
+  end
+
+  if settings.protect_language_toolchains == false then
+    return
+  end
+  discover_command("rust-sysroot", { "rustc", "--print", "sysroot" }, cwd, function(output)
+    local sysroot = vim.trim(output)
+    if
+      sysroot ~= ""
+      and register_root(sysroot .. "/lib/rustlib/src/rust/library", "language_toolchain", "Rust standard library")
+    then
+      refresh_buffers()
+    end
+  end)
+end
+
+local function discover_go(cwd)
+  if settings.protect_language_toolchains == false and settings.protect_dependency_caches == false then
+    return
+  end
+  discover_command("go-environment", { "go", "env", "-json", "GOROOT", "GOMODCACHE" }, cwd, function(output)
+    local ok, environment = pcall(vim.json.decode, output)
+    if not ok or type(environment) ~= "table" then
+      return
+    end
+
+    local changed = false
+    if settings.protect_language_toolchains ~= false then
+      changed = register_root(
+        environment.GOROOT and environment.GOROOT .. "/src",
+        "language_toolchain",
+        "Go standard library"
+      ) or changed
+    end
+    if settings.protect_dependency_caches ~= false then
+      changed = register_root(environment.GOMODCACHE, "dependency_cache", "Go module cache") or changed
+    end
+    if changed then
+      refresh_buffers()
+    end
+  end)
+end
+
+function M.discover_language_paths(cwd, language)
+  if language == nil or language == "rust" or language == "rust_analyzer" then
+    discover_rust(cwd)
+  end
+  if language == nil or language == "go" or language == "gopls" then
+    discover_go(cwd)
+  end
 end
 
 -- Add an exact runtime-owned directory such as the environment selected by
@@ -182,10 +390,7 @@ function M.protect_runtime_path(path)
 
   runtime_paths[path] = true
   load_settings()
-  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    M.apply(bufnr)
-  end
-  vim.cmd.redrawtabline()
+  refresh_buffers()
 end
 
 local function unlock(bufnr)
@@ -193,6 +398,8 @@ local function unlock(bufnr)
   vim.bo[bufnr].modifiable = true
   vim.b[bufnr].readonly_managed = false
   vim.b[bufnr].readonly_unlocked = true
+  vim.b[bufnr].readonly_reason = nil
+  vim.b[bufnr].readonly_root = nil
   vim.cmd.redrawtabline()
 end
 
@@ -220,6 +427,7 @@ function M.reload()
   if ui_highlights then
     ui_highlights.refresh()
   end
+  discovery_requests = {}
   load_settings()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then
@@ -230,6 +438,7 @@ function M.reload()
       M.apply(bufnr)
     end
   end
+  M.discover_language_paths(vim.fn.getcwd())
   vim.notify("Global settings reloaded", vim.log.levels.INFO, { title = "Settings" })
 end
 
@@ -245,6 +454,23 @@ function M.setup()
     desc = "Protect configured read-only paths",
   })
 
+  vim.api.nvim_create_autocmd("LspAttach", {
+    group = group,
+    callback = function(args)
+      local client = vim.lsp.get_client_by_id(args.data.client_id)
+      if not client or (client.name ~= "rust_analyzer" and client.name ~= "gopls") then
+        return
+      end
+
+      local root = client.config.root_dir
+      if type(root) ~= "string" or root == "" then
+        root = vim.fs.dirname(vim.api.nvim_buf_get_name(args.buf))
+      end
+      M.discover_language_paths(root, client.name)
+    end,
+    desc = "Discover workspace language toolchain paths",
+  })
+
   vim.api.nvim_create_user_command("ReadonlyUnlock", function()
     unlock(vim.api.nvim_get_current_buf())
   end, { desc = "Temporarily unlock the current buffer" })
@@ -256,10 +482,13 @@ function M.setup()
   vim.api.nvim_create_user_command("ReadonlyInfo", function()
     local bufnr = vim.api.nvim_get_current_buf()
     local path = vim.api.nvim_buf_get_name(bufnr)
+    local match = M.match(path)
     vim.notify(
-      ("Path: %s\nConfigured match: %s\nManaged lock: %s\nUnlocked: %s"):format(
+      ("Path: %s\nConfigured match: %s\nReason: %s\nRoot: %s\nManaged lock: %s\nUnlocked: %s"):format(
         path,
-        M.should_lock(path),
+        match ~= nil,
+        match and match.reason or "none",
+        match and match.root or "none",
         vim.b[bufnr].readonly_managed == true,
         vim.b[bufnr].readonly_unlocked == true
       ),
@@ -271,6 +500,8 @@ function M.setup()
   vim.api.nvim_create_user_command("SettingsReload", M.reload, {
     desc = "Reload global settings",
   })
+
+  M.discover_language_paths(vim.fn.getcwd())
 end
 
 return M

@@ -136,7 +136,7 @@ return {
         type = "server",
         port = "${port}",
         executable = {
-          command = platform.mason_bin "codelldb",
+          command = platform.codelldb_path(),
           args = { "--port", "${port}" },
         },
       }
@@ -295,7 +295,7 @@ return {
         refresh_dapui()
       end, { desc = "Debug: conditional breakpoint" })
       vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "Debug: run last" })
-      vim.keymap.set("n", "<leader>dr", dap.repl.open, { desc = "Debug: open REPL" })
+      vim.keymap.set("n", "<leader>dR", dap.repl.open, { desc = "Debug: open REPL" })
       vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "Debug: terminate" })
       vim.keymap.set("n", "<leader>du", function()
         require("config.sidebar").toggle "debug"

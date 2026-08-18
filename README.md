@@ -25,8 +25,12 @@ manager or the official Tree-sitter release, not from npm.
 
 Language SDKs remain explicit host dependencies: C# needs the .NET SDK, Java
 needs JDK 21+, Go needs `go`, Rust needs `rustc` + `cargo`, and JavaScript tools
-need Node.js + npm. Python project commands through uv.nvim need `uv`. Mason
-installs editor-side tools; it does not install these SDKs.
+need Node.js + npm. Rust uses the analyzer shipped in the active `rustc` sysroot
+when available, then checks PATH, and finally falls back to Mason. For a
+rustup-managed toolchain, install the matching component with
+`rustup component add rust-analyzer`; other installers need no special handling.
+Python project commands through uv.nvim need `uv`. Mason installs editor-side
+tools; it does not install these SDKs.
 
 Plugins are managed by [lazy.nvim](https://github.com/folke/lazy.nvim).
 
@@ -536,7 +540,9 @@ initially expanded sections with
 control-bearing DAP REPL and labelled Debug Console. DAP panels, REPL, and console are treated as
 tool views rather than source buffers: debug/start/UI shortcuts and Watch's
 default `r`-to-REPL action are disabled there. Use those commands from an
-editor buffer; `<leader>dr` opens or focuses the REPL from code.
+editor buffer; `<leader>dR` opens or focuses the REPL from code. In Rust
+source buffers, `<leader>cl` runs and `<leader>dr` debugs the target named by
+the CodeLens above the current function.
 
 Inside the CodeCompanion chat buffer, every chat action uses LocalLeader
 (`\`, buffer-local, so normal buffers are unaffected): `\r` regenerate,
@@ -618,13 +624,23 @@ PowerShell 7, then Windows PowerShell 5.1, then cmd, and other platforms use
 `explorer.show_git_ignored` option (default `true`) shows files ignored by
 `.gitignore` (such as `.env`) in nvim-tree; set it to `false` to hide them,
 and restart Neovim to apply. Its
-`readonly` section protects system SDK/toolchain headers and Neovim-managed
-tool packages by default. Add custom glob patterns to `include` and `exclude`;
-exclude patterns always win. Save the file and run `:SettingsReload` to apply
-changes to open buffers. Protected buffers use both `readonly` and
-`nomodifiable`; use `:ReadonlyUnlock` for an intentional temporary edit.
-`protect_python_environments` controls protection for environments selected by
-venv-selector.nvim. Bufferline prefixes locked file buffers with ``.
+`readonly` section protects system SDK/toolchain headers, Rust and Go standard
+libraries, dependency caches, and Neovim-managed tool packages by default.
+Rust roots come from the active workspace's `rustc --print sysroot`; Go roots
+come from `go env GOROOT GOMODCACHE`. Cargo registry/Git sources follow
+`CARGO_HOME` (or Cargo's default home). Discovery therefore works with rustup,
+Scoop, Homebrew, system packages, and manual installations without detecting a
+specific package manager. It runs once at startup and again when rust-analyzer
+or gopls attaches, so project-local toolchain selection is honored.
+
+Use `protect_language_toolchains`, `protect_dependency_caches`, and
+`protect_python_environments` to control the three dynamic groups. Add custom
+glob patterns to `include` and `exclude`; exclude patterns always win, including
+when an installation path resolves through a symlink or junction. Save the file
+and run `:SettingsReload` to apply changes to open buffers. Protected buffers
+use both `readonly` and `nomodifiable`; use `:ReadonlyUnlock` for an intentional
+temporary edit. `:ReadonlyInfo` reports the matching reason and discovered root.
+Bufferline prefixes locked file buffers with ``.
 
 ## Language profiles
 
@@ -647,10 +663,14 @@ from the profile does not uninstall tools already present; remove those from
 `:Mason` when desired.
 
 Mason manages most Neovim LSP servers, formatters, and debug adapters. Java is
-managed as a versioned JDTLS/test/debug bundle by nvim-java. The `uv` package
-manager is another deliberate exception: install it as a host command and
-uv.nvim will use it from PATH. Language SDK tools such as `dotnet`, `gofmt`,
-and `rustfmt` also remain owned by their host toolchains.
+managed as a versioned JDTLS/test/debug bundle by nvim-java. Rust first uses
+rust-analyzer from the active workspace `rustc` sysroot, then a working PATH
+installation, and finally Mason. This avoids coupling the configuration to
+rustup, Scoop, or another toolchain installer while keeping the analyzer aligned
+with a pinned or older compiler. The `uv` package manager is another deliberate
+exception: install it as a host command and uv.nvim will use it from PATH.
+Language SDK tools such as `dotnet`, `gofmt`, and `rustfmt` also remain owned by
+their host toolchains.
 Syntax highlighting remains available when an enabled language toolchain is
 missing, but its LSP, formatter, debugger, and Mason tools wait for the host
 prerequisite: Python 3 with venv, a C/C++ compiler, `dotnet`, `go`, `rustc` +

@@ -62,6 +62,13 @@ return {
 
       if languages.enabled "rust" then
         vim.lsp.config("rust_analyzer", {
+          -- Prefer rust-analyzer from the workspace's active rustc sysroot.
+          -- This follows project toolchains without depending on their
+          -- installer; PATH and Mason remain fallbacks.
+          cmd = require("config.rust").start,
+          handlers = {
+            ["workspace/codeLens/refresh"] = require("config.rust_codelens").on_refresh,
+          },
           settings = {
             ["rust-analyzer"] = {
               lens = {

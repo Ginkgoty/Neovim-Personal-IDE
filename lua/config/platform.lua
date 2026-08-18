@@ -53,6 +53,15 @@ function M.debugpy_python()
   return M.mason_package("debugpy", "venv", "bin", "python")
 end
 
+function M.codelldb_path()
+  if M.is_windows then
+    -- Mason exposes a codelldb.cmd shim in mason/bin. libuv-backed DAP
+    -- process spawning needs the real executable rather than a batch file.
+    return M.mason_package("codelldb", "extension", "adapter", "codelldb.exe")
+  end
+  return M.mason_bin "codelldb"
+end
+
 local function executable_path(name)
   local path = vim.fn.exepath(name)
   return path ~= "" and path or nil
