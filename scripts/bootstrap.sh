@@ -84,7 +84,7 @@ has_python_venv() {
   local candidate
   for candidate in python3 python; do
     command -v "$candidate" >/dev/null 2>&1 || continue
-    "$candidate" -c ''import venv'' >/dev/null 2>&1 && return 0
+    "$candidate" -c 'import venv' >/dev/null 2>&1 && return 0
   done
   return 1
 }
@@ -550,7 +550,7 @@ run_editor_bootstrap() {
 }
 
 detect_platform
-printf 'Neovim Personal IDE bootstrap (%s%s)\n' "$OS_KIND" "${DISTRO_ID:+/$DISTRO_ID}"
+printf 'ginko.nvim bootstrap (%s%s)\n' "$OS_KIND" "${DISTRO_ID:+/$DISTRO_ID}"
 INSTALL_METHOD="$PACKAGE_MANAGER"
 
 collect_report

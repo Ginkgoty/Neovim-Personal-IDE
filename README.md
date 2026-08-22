@@ -1,6 +1,6 @@
-# Neovim Personal IDE
+# ginko.nvim
 
-A modern, cross-platform Neovim configuration for C/C++, C#/.NET, Python,
+ginko.nvim is a modern, cross-platform Neovim configuration for C/C++, C#/.NET, Python,
 Go, Rust, Java, JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua.
 
 ## Requirements
@@ -45,7 +45,7 @@ ask before invoking a package manager or the portable Linux installer.
 Linux and macOS:
 
 ```sh
-git clone https://github.com/Ginkgoty/Neovim-Personal-IDE.git ~/.config/nvim
+git clone https://github.com/Ginkgoty/ginko.nvim.git ~/.config/nvim
 bash ~/.config/nvim/scripts/bootstrap.sh
 ```
 
@@ -68,7 +68,7 @@ missing; it never bootstraps a package manager.
 Windows PowerShell:
 
 ```powershell
-git clone https://github.com/Ginkgoty/Neovim-Personal-IDE.git $env:LOCALAPPDATA\nvim
+git clone https://github.com/Ginkgoty/ginko.nvim.git $env:LOCALAPPDATA\nvim
 powershell -ExecutionPolicy Bypass -File $env:LOCALAPPDATA\nvim\scripts\bootstrap.ps1
 ```
 

@@ -283,7 +283,7 @@ function M.cmd(root_dir)
     "--clang-tidy",
     "--completion-style=detailed",
     "--header-insertion=iwyu",
-    "--function-arg-placeholders",
+    "--function-arg-placeholders=true",
     "--enable-config",
   }
 

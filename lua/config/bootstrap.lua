@@ -267,7 +267,7 @@ end
 
 local function render_blocked(report)
   local lines = {
-    "# Neovim Personal IDE bootstrap required",
+    "# ginko.nvim bootstrap required",
     "",
     "Plugin, Mason, and Tree-sitter loading has been stopped because required dependencies are missing.",
     "",

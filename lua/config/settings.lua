@@ -62,6 +62,10 @@ return {
   },
 
   ui = {
+    dashboard = {
+      enabled = true,
+    },
+
     which_key_delay_ms = 300,
 
     -- Improve LSP type/parameter inlay hints only when the active theme does

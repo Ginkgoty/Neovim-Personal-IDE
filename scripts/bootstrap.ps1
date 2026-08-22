@@ -290,7 +290,7 @@ function Invoke-EditorBootstrap {
   }
 }
 
-Write-Host "Neovim Personal IDE bootstrap (Windows)" -ForegroundColor Cyan
+Write-Host "ginko.nvim bootstrap (Windows)" -ForegroundColor Cyan
 $report = @(Get-DependencyReport)
 Show-DependencyReport $report
 
