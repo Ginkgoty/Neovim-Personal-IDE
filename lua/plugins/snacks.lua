@@ -1,5 +1,17 @@
 local ginkgo_header = require "config.banner"
 
+local function style_dashboard()
+  local header = vim.api.nvim_get_hl(0, { name = "DiagnosticWarn", link = false })
+  header.bold = true
+  vim.api.nvim_set_hl(0, "SnacksDashboardHeader", header)
+
+  for suffix, source in pairs { Desc = "Special", Icon = "Special", Key = "Number" } do
+    local highlight = vim.api.nvim_get_hl(0, { name = source, link = false })
+    highlight.bold = true
+    vim.api.nvim_set_hl(0, "SnacksDashboard" .. suffix, highlight)
+  end
+end
+
 return {
   {
     "folke/snacks.nvim",
@@ -7,21 +19,25 @@ return {
     priority = 1000,
     lazy = false,
     opts = function()
+      local highlight_group = vim.api.nvim_create_augroup("GinkoDashboardHighlights", { clear = true })
+      style_dashboard()
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = highlight_group,
+        callback = style_dashboard,
+      })
+
       local ui = require("config.settings").ui or {}
       local dashboard = ui.dashboard or {}
       local images = ui.images or {}
       return {
         dashboard = {
           enabled = dashboard.enabled ~= false,
-          width = 64,
+          width = 48,
           formats = { header = { "%s", align = "left" } },
           preset = {
             header = ginkgo_header,
             keys = {
-              { icon = " ", key = "f", desc = "Find file", action = ":Telescope find_files" },
-              { icon = " ", key = "g", desc = "Find text", action = ":Telescope live_grep" },
               { icon = " ", key = "r", desc = "Recent files", action = ":Telescope oldfiles" },
-              { icon = " ", key = "n", desc = "New file", action = ":ene | startinsert" },
               {
                 icon = " ",
                 key = "c",
@@ -34,9 +50,8 @@ return {
             },
           },
           sections = {
-            { section = "header" },
+            { header = ginkgo_header },
             { section = "keys", gap = 1, padding = 1 },
-            { text = { { "Grow ideas, one branch at a time.", hl = "SnacksDashboardFooter" } }, align = "center" },
             { section = "startup" },
           },
         },

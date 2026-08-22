@@ -3,6 +3,10 @@
 ginko.nvim is a modern, cross-platform Neovim configuration for C/C++, C#/.NET, Python,
 Go, Rust, Java, JavaScript/TypeScript, React, Vue, SQL, JSON, and Lua.
 
+<p align="center">
+  <img src="docs/images/home.png" alt="ginko.nvim dashboard" width="900">
+</p>
+
 ## Requirements
 
 Dependencies are divided into three levels:

@@ -197,7 +197,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
     if client and client.name == "rust_analyzer" and client:supports_method("textDocument/codeLens", bufnr) then
       require("config.rust_codelens").attach(bufnr, client)
     elseif client and client:supports_method("textDocument/codeLens", bufnr) then
-      vim.lsp.codelens.enable(true, { bufnr = bufnr, client_id = client.id })
+      -- Neovim 0.12 treats bufnr and client_id as mutually exclusive
+      -- capability filters. Enable CodeLens for this buffer; only attached
+      -- clients that advertise CodeLens will participate.
+      vim.lsp.codelens.enable(true, { bufnr = bufnr })
       map("<leader>ul", function()
         local filter = { bufnr = bufnr }
         vim.lsp.codelens.enable(not vim.lsp.codelens.is_enabled(filter), filter)
