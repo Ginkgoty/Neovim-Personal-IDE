@@ -1,32 +1,4 @@
-local ginkgo_header = [[
-              _..-''''-._  _.-''''-.._
-          _.-'           \/           '-._
-       .-'                               '-.
-     .'                                     '.
-    /                                         \
-   ;        .-._                    _.-.        ;
-   |     .-'    '-.              .-'    '-.     |
-    \  .'          '-.        .-'          '.  /
-     \/               '-.  .-'               \/
-      \                  \/                  /
-       \                                    /
-        '.                                .'
-          '-._                        _.-'
-              '--..              ..--'
-                   '-.        .-'
-                      \      /
-                       \    /
-                        \  /
-                         ||
-                         ||
-
-       _       _                    _
-  __ _(_)_ __ | | _____   _ ____   ___(_)_ __ ___
- / _` | | '_ \| |/ / _ \ | '_ \ \ / / | '_ ` _ \
-| (_| | | | | |   < (_) || | | \ V /| | | | | | |
- \__, |_|_| |_|_|\_\___(_)_| |_|\_/ |_|_| |_| |_|
- |___/
-]]
+local ginkgo_header = require "config.banner"
 
 return {
   {
@@ -41,7 +13,7 @@ return {
       return {
         dashboard = {
           enabled = dashboard.enabled ~= false,
-          width = 58,
+          width = 64,
           formats = { header = { "%s", align = "left" } },
           preset = {
             header = ginkgo_header,
@@ -57,7 +29,7 @@ return {
                 action = ":edit " .. vim.fn.stdpath "config" .. "/lua/config/settings.lua",
               },
               { icon = "󰒲 ", key = "l", desc = "Manage plugins", action = ":Lazy" },
-              { icon = " ", key = "m", desc = "Manage IDE tools", action = ":Mason" },
+              { icon = " ", key = "m", desc = "Manage IDE tools", action = ":Mason" },
               { icon = " ", key = "q", desc = "Quit", action = ":qa" },
             },
           },
